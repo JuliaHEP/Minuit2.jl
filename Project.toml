@@ -1,0 +1,13 @@
+name = "Minuit2"
+uuid = "37821647-3276-4ed8-9a4e-bc9886b3c106"
+authors = ["Jan Strube <jan.strube@gmail.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
