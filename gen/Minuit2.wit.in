@@ -1,0 +1,44 @@
+module_name         = "Minuit2"
+export_jl_fname     = "Minuit2-export.jl"
+module_jl_fname     = "Minuit2-generated.jl"
+out_cpp_fname       = "jlMinuit2.cxx"
+out_h_fname         = "jlMinuit2.h"
+out_cxx_dir         = "cpp"
+out_jl_dir          = "jl"
+
+clang_opts          = ["-v", "-std=c++17"]
+
+include_dirs        = [ "./cpp", 
+                        "@Minuit2_INCLUDE_DIR@/Minuit2",
+                        "@Minuit2_INCLUDE_DIR@",
+                        "@Julia_INCLUDE_DIR@",  
+                        "@JlCxx_INCLUDE_DIR@"]
+
+input               = [ "Minuit2Wrap.h",
+                        "Minuit2/FunctionMinimum.h",
+                        "Minuit2/MnApplication.h",
+                        "Minuit2/MnMigrad.h",
+                        "Minuit2/MnHesse.h",
+                        "Minuit2/MnMinos.h",
+                        "Minuit2/MnStrategy.h",
+                        "Minuit2/MinuitParameter.h",
+                        "Minuit2/MnUserParameters.h",
+                        "Minuit2/MnUserCovariance.h",
+                        "Minuit2/MnUserParameterState.h",
+                        "Minuit2/FCNBase.h",
+                        "Minuit2/MinimumState.h",
+                        "Minuit2/MinimumParameters.h",
+                        "Minuit2/MnCross.h",
+                        "Minuit2/MinosError.h",
+                        "Minuit2/LAVector.h",
+                        "Minuit2/MnPrint.h"
+                      ]
+
+extra_headers       = [ ]
+vetoed_finalizer_classes = [ ]
+export              = "all"
+veto_list           = "Minuit2-veto.h"
+cxx-std             = "c++17"
+inheritances        = [ ]
+export_blacklist    = [ ]
+cxxwrap_version     = "@CxxWrap_VERSION@"
