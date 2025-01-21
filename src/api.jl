@@ -338,12 +338,5 @@ minimisation for all other parameters of the cost function for each scan point.
 This requires many more function evaluations than running the Hesse algorithm.
 """
 function minos!(m::Minuit; strategy=1)
-    MnMinos(const FCNBase &fcn, const FunctionMinimum &min, const MnStrategy &stra);
-
-    minos = ROOT!Minuit2!MnMinos(m.fcn, m.fmin, strategy)
-    paren(minos, name)
     return m
 end
-
-"""
-    minos!(m::Minuit)
