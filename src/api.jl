@@ -1,12 +1,26 @@
 using CxxWrap
 using PrettyTables
 using LinearAlgebra
+using Distributions
 
-export Minuit, migrad!, hesse!, minos!
-export values, fval, method, nfcn, niter, up, isvalid, matrix
+export Minuit, MinosError, migrad!, hesse!, minos!
+export values, fval, method, nfcn, niter, up, isvalid, matrix, minos, errors, merrors
+export name, valid, lower, upper, symmetric
 
 abstract type OptimizationResults end
 
+struct MinosError
+    ipar::Int
+    name::String
+    valid::Bool
+    lower::Float64
+    upper::Float64
+    merror::ROOT!Minuit2!MinosError
+end
+name(me::MinosError) = me.name
+valid(me::MinosError) = me.valid
+lower(me::MinosError) = me.lower
+upper(me::MinosError) = me.upper
 
 mutable struct Minuit
     funcname::String                            # Name of the function
@@ -14,17 +28,20 @@ mutable struct Minuit
     scfunc::CxxWrap.SafeCFunction               # The safe C function (reference to keep alive)
     x0::AbstractVector                          # Initial parameters values 
     npar::Int                                   # Number of parameters
-    method::Symbol                              # The minimization method    
+    method::Symbol                              # The minimization method
+    tolerance::Real                             # The tolerance for the minimization    
     kwargs::Dict{Symbol, Any}                   # Keyword arguments
     userpars::ROOT!Minuit2!MnUserParameterState        # The user parameters
     app::Union{ROOT!Minuit2!MnApplication, Nothing}    # The Minuit application
     fmin::Union{ROOT!Minuit2!FunctionMinimum, Nothing} # The result of the minimization
+    minos::Union{Dict{String, MinosError}, Nothing}    # The Minos errors
 end
 
 function Base.values(m::Minuit)
     state = State(m.app)
     [Value(state, i) for i in 0:m.npar-1]
 end
+
 fval(m::Minuit) = Fval(State(m.app))
 method(m::Minuit) = m.method
 nfcn(m::Minuit) = NFcn(m.fmin)
@@ -43,6 +60,24 @@ function matrix(m::Minuit; correlation=false)
         return a
     end
     return
+end
+minos(m::Minuit) = m.minos === nothing ? Dict{String, MinosError}() : minos!(m).minos
+minos(m::Minuit, key) = m.minos[key]
+errors(m::Minuit) = [Error(State(m.app), i) for i in 0:m.npar-1]
+merrors(m::Minuit) = [m.minos[Name(m.userpars, i)] for i in 0:m.npar-1]
+Base.show(io::IO, m::Dict{String, MinosError}) = show.(io, collect(values(m)))
+
+function normalize_par(m::Minuit, key::Union{Int, String})
+    if isa(key, Int)
+        return key - 1, Name(State(m.app), key-1)
+    end
+    if isa(key, String)
+        names = [Name(State(m.app), i) for i in 0:m.npar-1]
+        if key in names
+            return findfirst(isequal(key), names), key
+        end
+    end
+    throw(ArgumentError("Parameter $key not found"))
 end
 
 """
@@ -202,7 +237,7 @@ function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), meth
     end
     kwargs = Dict(:method=>method, :maxfcn=>maxfcn, :tolerance=>tolerance)
     #migrad = ROOT!Minuit2!MnMigrad(jf, userpars)
-    Minuit(funcname, jf, sf, x0, npar, method, kwargs, userpars, nothing, nothing)
+    Minuit(funcname, jf, sf, x0, npar, method, tolerance, kwargs, userpars, nothing, nothing, nothing)
 end
 
 function Base.show(io::IO, m::Minuit)
@@ -230,8 +265,13 @@ function Base.show(io::IO, m::Minuit)
         names = [Name(userpars, i) for i in 0:npar-1]
         values = [Value(userpars, i) for i in 0:npar-1]
         errors = [Error(userpars, i) for i in 0 : npar-1]
-        minos_err_low = [ " " for i in 1:npar]
-        minos_err_high = [ " " for i in 1:npar]
+        if m.minos === nothing
+            minos_err_low = [ " " for i in 0:npar-1]
+            minos_err_high = [ " " for i in 0:npar-1]
+        else
+            minos_err_low = [ haskey(m.minos,Name(userpars, i-1)) ? m.minos[Name(userpars, i-1)].lower : " " for i in 1:npar]
+            minos_err_high = [ haskey(m.minos,Name(userpars, i-1)) ? m.minos[Name(userpars, i-1)].upper : " " for i in 1:npar]
+        end
         limit_low = [ HasLowerLimit(mnpars[i]) ? LowerLimit(mnpars[i]) : " " for i in 1:npar]
         limit_up = [ HasUpperLimit(mnpars[i]) ? UpperLimit(mnpars[i]) : " " for i in 1:npar]
         fixed = [ IsFixed(mnpars[i]) ? true : " " for i in 1:npar]
@@ -263,7 +303,14 @@ function migrad!(m::Minuit, strategy=1)
     #---Update the Minuit object with the results---------------------------------------------------
     m.app = migrad
     m.fmin = min
+    m.minos = nothing
     return m
+end
+
+function edm_goal(m::Minuit; migrad_factor=false)
+    edm_goal = max( m.tolerance * Up(m.fcn), 4 * sqrt(eps()))
+    migrad_factor && (edm_goal *= 2e-3)
+    edm_goal
 end
 
 """
@@ -293,8 +340,13 @@ where this rule is violated, but in practice it should always work.
 """
 function hesse!(m::Minuit; strategy=1, maxcalls=0)
     hesse = ROOT!Minuit2!MnHesse(strategy)
+    if m.fmin === nothing || !IsValid(m.fmin)
+        migrad!(m)
+    end
     paren(hesse, m.fcn, m.fmin, maxcalls)
-    m.fmin = nothing
+    #---Update the Minuit object with the results---------------------------------------------------
+    #fmin = ROOT!Minuit2!createFunctionMinimum(m.fcn, State(m.app), ROOT!Minuit2!MnStrategy(strategy), edm_goal(m, migrad_factor=true))
+    #m.fmin = fmin
     return m
 end
 
@@ -311,15 +363,15 @@ confidence interval.
 ## Arguments
 - `m::Minuit` : The Minuit object to minimize.
 - `parameters::AbstractVector{String}` : Names of the parameters to compute the Minos errors for.
-- `cl::Int` : Confidence level of the interval. If not set or None, a standard 68 %
+- `cl::Number` : Confidence level of the interval. If not set, a standard 68 %
    interval is computed (default). If 0 < cl < 1, the value is interpreted as
    the confidence level (a probability). For convenience, values cl >= 1 are
    interpreted as the probability content of a central symmetric interval
    covering that many standard deviations of a normal distribution. For
    example, cl=1 is interpreted as 68.3 %, and cl=2 is 84.3 %, and so on. Using
    values other than 0.68, 0.9, 0.95, 0.99, 1, 2, 3, 4, 5 require the scipy module.
-- `ncall::Int` : Limit the number of calls made by Minos. If None, an adaptive internal
-   heuristic of the Minuit2 library is used (Default: None).
+- `ncall::Int` : Limit the number of calls made by Minos. If 0, an adaptive internal
+   heuristic of the Minuit2 library is used (Default: 0).
 
 ## Notes
 Asymptotically (large samples), the Minos interval has a coverage probability
@@ -337,6 +389,105 @@ Effectively, it scans over one parameter in small steps and runs a full
 minimisation for all other parameters of the cost function for each scan point.
 This requires many more function evaluations than running the Hesse algorithm.
 """
-function minos!(m::Minuit; strategy=1)
+function minos!(m::Minuit; cl=0.68, ncall=0, parameters=(), strategy=1)
+    cl >= 1.0 && (cl = cdf(Chisq(1), cl^2))    # convert sigmas into confidence level
+    factor = quantile(Chisq(1), cl)            # convert confidence level to errordef
+
+    # If the function minimum does not exist or the last state was modified, run Hesse
+    if m.fmin === nothing || !IsValid(m.fmin)
+        hesse!(m)
+    end    
+    if !isvalid(m)
+        throw(ErrorException("Function minimum is not valid"))
+    end
+    #---Get the parameters to run Minos-------------------------------------------------------------
+    if length(parameters) == 0
+        ipars = [ipar for ipar in 0:m.npar-1 if !IsFixed(Parameter(State(m.app), ipar))]
+    else
+        ipars = []
+        for par in parameters
+            ip, pname = normalize_par(m, par)
+            if IsFixed(Parameter(State(m.app), ip))
+                warn("Cannot scan over fixed parameter $pname")
+            else
+                push!(ipars, ip)
+            end
+        end
+    end
+    #---Run Minos for each parameter----------------------------------------------------------------
+    minos = ROOT!Minuit2!MnMinos(m.fcn, m.fmin, strategy)
+    merrors = Dict{String, MinosError}()
+    for ipar in ipars
+        mn = Minos(minos, ipar, ncall, m.tolerance)
+        me = MinosError(ipar, Name(m.userpars, ipar), IsValid(mn), Lower(mn), Upper(mn), mn)
+        merrors[Name(m.userpars, ipar)] = me
+    end
+    m.minos = merrors
     return m
+end
+
+function Base.show(io::IO, me::MinosError)
+    e = me.merror
+    header = [me.name, me.valid ? "valid" : "invalid", " " ]
+    data = [ "Error"    me.lower      me.upper;
+             "Valid"    LowerValid(e) UpperValid(e);
+             "At Limit" AtLowerLimit(e) AtUpperLimit(e);
+             "Max Fcn"  AtLowerMaxFcn(e) AtUpperMaxFcn(e);
+             "New Min"  LowerNewMin(e) UpperNewMin(e)]
+    pretty_table(io, data; header=header, alignment=:l)
+end
+
+"""
+    contour(m::Minuit, x, y; size=50, bound=2, grid=(), subtract_min=false)
+
+Get a 2D contour of the function around the minimum.
+
+It computes the contour via a function scan over two parameters, while keeping
+all other parameters fixed. The related :meth:`mncontour` works differently: for
+each pair of parameter values in the scan, it minimises the function with the
+respect to all other parameters.
+
+This method is useful to inspect the function near the minimum to detect issues
+(the contours should look smooth). It is not a confidence region unless the
+function only has two parameters. Use :meth:`mncontour` to compute confidence
+regions.
+
+## Arguments
+    x : int or str
+        First parameter for scan.
+    y : int or str
+        Second parameter for scan.
+    size : int or tuple of int, optional
+        Number of scanning points per parameter (Default: 50). A tuple is
+        interpreted as the number of scanning points per parameter.
+        Ignored if grid is set.
+    bound : float or tuple of floats, optional
+        If bound is 2x2 array, [[v1min,v1max],[v2min,v2max]].
+        If bound is a number, it specifies how many :math:`\sigma`
+        symmetrically from minimum (minimum+- bound*:math:`\sigma`).
+        (Default: 2). Ignored if grid is set.
+    grid : tuple of array-like, optional
+        Grid points to scan over. If grid is set, size and bound are ignored.
+    subtract_min :
+        Subtract minimum from return values (Default: False).
+
+##  Returns
+    array of float
+        Parameter values of first parameter.
+    array of float
+        Parameter values of second parameter.
+    2D array of float
+        Function values.
+
+        x: Union[int, str],
+        y: Union[int, str],
+        *,
+        size: int = 50,
+        bound: Union[float, Iterable[Tuple[float, float]]] = 2,
+        grid: Tuple[ArrayLike, ArrayLike] = None,
+        subtract_min: bool = False,
+
+"""
+function contour(m::Minuit, x, y; numpoints=100, sigma=1, cl=0.68, ncall=0, strategy=1)
+
 end

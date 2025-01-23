@@ -9,7 +9,8 @@ cd(@__DIR__)
 mkpath(builddir)
 
 if Sys.isapple()
-    ENV["SDKROOT"]=readchomp(`xcrun --sdk macosx --show-sdk-path`)
+    #ENV["SDKROOT"]=readchomp(`xcrun --sdk macosx --show-sdk-path`)
+    ENV["SDKROOT"]="/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk"
 end
 
 cxxwrap_prefix = CxxWrap.prefix_path()
@@ -30,6 +31,7 @@ open(wit, "w") do f
     end
 end
 
+WrapIt.install()
 rc = wrapit(wit, force=true, cmake=false, update=updatemode, verbosity=1)
 #rc = run(`wrapit $wit --force -v 1`).exitcode
 if !isnothing(rc) && rc != 0

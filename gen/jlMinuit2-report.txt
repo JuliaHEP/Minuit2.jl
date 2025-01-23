@@ -7,7 +7,6 @@ The definition of the following types where not found. Use the extra_headers con
 The auto_veto parameter is set to true, generation of the wrappers that would have needed theses types were skipped.
 
 ROOT::Minuit2::ContoursError
-ROOT::Minuit2::MnFcn
 std::basic_ostream
 std::span<const ROOT::Minuit2::MinimumState>
 std::span<const double>
@@ -46,6 +45,7 @@ ROOT::Minuit2::MnApplication
 ROOT::Minuit2::ModularFunctionMinimizer
 ROOT::Minuit2::MnMigrad
 ROOT::Minuit2::MnHesse
+ROOT::Minuit2::MnFcn
 ROOT::Minuit2::MnMinos
 ROOT::Minuit2::MnCross
 ROOT::Minuit2::MnCross::CrossParLimit
@@ -230,6 +230,10 @@ unsigned int ROOT::Minuit2::MnUserParameterState::ExtOfInt(unsigned int)
 unsigned int ROOT::Minuit2::MnUserParameterState::VariableParameters()
 const ROOT::Minuit2::MnMachinePrecision & ROOT::Minuit2::MnUserParameterState::Precision()
 void ROOT::Minuit2::MnUserParameterState::SetPrecision(double)
+double ROOT::Minuit2::MnMachinePrecision::Eps()
+double ROOT::Minuit2::MnMachinePrecision::Eps2()
+void ROOT::Minuit2::MnMachinePrecision::SetPrecision(double)
+void ROOT::Minuit2::MnMachinePrecision::ComputePrecision()
 void ROOT::Minuit2::MinosError::MinosError(unsigned int, double, const ROOT::Minuit2::MnCross &, const ROOT::Minuit2::MnCross &)
 void ROOT::Minuit2::MinosError::MinosError(const ROOT::Minuit2::MinosError &)
 ROOT::Minuit2::MinosError & ROOT::Minuit2::MinosError::operator=(const ROOT::Minuit2::MinosError &)
@@ -374,6 +378,7 @@ void ROOT::Minuit2::MnHesse::MnHesse(unsigned int)
 void ROOT::Minuit2::MnHesse::MnHesse(const ROOT::Minuit2::MnStrategy &)
 ROOT::Minuit2::MnUserParameterState ROOT::Minuit2::MnHesse::operator()(const ROOT::Minuit2::FCNBase &, const ROOT::Minuit2::MnUserParameterState &, unsigned int)
 void ROOT::Minuit2::MnHesse::operator()(const ROOT::Minuit2::FCNBase &, ROOT::Minuit2::FunctionMinimum &, unsigned int)
+ROOT::Minuit2::MinimumState ROOT::Minuit2::MnHesse::operator()(const ROOT::Minuit2::MnFcn &, const ROOT::Minuit2::MinimumState &, const ROOT::Minuit2::MnUserTransformation &, unsigned int)
 unsigned int ROOT::Minuit2::MnHesse::Ncycles()
 double ROOT::Minuit2::MnHesse::Tolerstp()
 double ROOT::Minuit2::MnHesse::TolerG2()
@@ -405,3 +410,4 @@ int ROOT::Minuit2::Mndaxpy(unsigned int, double, const double *, int, double *, 
 int ROOT::Minuit2::Mndscal(unsigned int, double, double *, int)
 int ROOT::Minuit2::Mndspmv(const char *, unsigned int, double, const double *, const double *, int, double, double *, int)
 int NIter(const ROOT::Minuit2::FunctionMinimum &)
+ROOT::Minuit2::FunctionMinimum ROOT::Minuit2::createFunctionMinimum(const JuliaFcn &, const ROOT::Minuit2::MnUserParameterState &, const ROOT::Minuit2::MnStrategy &, double)
