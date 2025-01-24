@@ -13,7 +13,7 @@ export ROOT!Minuit2!FunctionMinimum, ROOT!Minuit2!FunctionMinimum!MnAboveMaxEdm,
 export ROOT!Minuit2!FunctionMinimum!MnValid, ROOT!Minuit2!FunctionMinimum!Status, ROOT!Minuit2!GradientParameterSpace
 export ROOT!Minuit2!GradientParameterSpace!External, ROOT!Minuit2!GradientParameterSpace!Internal, ROOT!Minuit2!LASymMatrix, ROOT!Minuit2!LAVector
 export ROOT!Minuit2!MinimumError, ROOT!Minuit2!MinimumParameters, ROOT!Minuit2!MinimumSeed, ROOT!Minuit2!MinimumState, ROOT!Minuit2!MinosError
-export ROOT!Minuit2!MinuitParameter, ROOT!Minuit2!MnApplication, ROOT!Minuit2!MnCross, ROOT!Minuit2!MnCross!CrossFcnLimit
+export ROOT!Minuit2!MinuitParameter, ROOT!Minuit2!MnApplication, ROOT!Minuit2!MnContours, ROOT!Minuit2!MnCross, ROOT!Minuit2!MnCross!CrossFcnLimit
 export ROOT!Minuit2!MnCross!CrossNewMin, ROOT!Minuit2!MnCross!CrossParLimit, ROOT!Minuit2!MnFcn, ROOT!Minuit2!MnGlobalCorrelationCoeff
 export ROOT!Minuit2!MnHesse, ROOT!Minuit2!MnMachinePrecision, ROOT!Minuit2!MnMigrad, ROOT!Minuit2!MnMinos, ROOT!Minuit2!MnPrint
 export ROOT!Minuit2!MnPrint!AddFilter, ROOT!Minuit2!MnPrint!ClearFilter, ROOT!Minuit2!MnPrint!GlobalLevel, ROOT!Minuit2!MnPrint!MaxNP
@@ -28,4 +28,4 @@ export SetHessianCentralFDMixedDerivatives, SetHessianForcePosDef, SetHessianG2T
 export SetHessianStepTolerance, SetHighStrategy, SetLevel, SetLimits, SetLowStrategy, SetLowerLimit, SetMediumStrategy, SetName, SetPrecision
 export SetStorageLevel, SetUpperLimit, SetValue, SetVeryHighStrategy, State, StorageLevel, Strategy, TolerG2, Tolerstp, Trafo, Up
 export Upper, UpperLimit, UpperNewMin, UpperState, UpperValid, Upval, UserCovariance, UserParameters, UserState, Value
-export VariableParameters, Vec, add!, assign, gradParameterSpace, mult!, nfcn, nfcn!, paren, setErrorDef, size, std!pair, sub!
+export VariableParameters, Vec, X, XYPoint, Y, add!, assign, gradParameterSpace, mult!, nfcn, nfcn!, paren, size, std!pair, sub!

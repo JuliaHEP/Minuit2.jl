@@ -5,7 +5,8 @@
 #include "Minuit2/MnStrategy.h"
 #include "Minuit2/MnUserFcn.h"
 #include "Minuit2/MnSeedGenerator.h"
-#include <Minuit2/Numerical2PGradientCalculator.h>
+#include "Minuit2/MnContours.h"
+#include "Minuit2/Numerical2PGradientCalculator.h"
 
 using namespace ROOT::Minuit2;
 FunctionMinimum ROOT::Minuit2::createFunctionMinimum(const JuliaFcn& fcn, const MnUserParameterState& st,
@@ -27,4 +28,13 @@ FunctionMinimum ROOT::Minuit2::createFunctionMinimum(const JuliaFcn& fcn, const 
   std::vector<MinimumState> minstv(1, MinimumState(minp, seed.Edm(), fcn.nfcn));
   if (minstv.back().Edm() < edm_goal) return FunctionMinimum(seed, minstv, fcn.Up());
   return FunctionMinimum(seed, minstv, fcn.Up(), FunctionMinimum::MnAboveMaxEdm);
+}
+
+std::vector<XYPoint> paren(const ROOT::Minuit2::MnContours& contour, unsigned int i, unsigned int j, unsigned int npoints) {
+  std::vector<XYPoint> result;
+  auto points = contour(i, j, npoints);
+  for(auto& p : points){
+    result.push_back({p.first, p.second});
+  }
+  return result;
 }

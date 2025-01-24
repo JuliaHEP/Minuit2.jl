@@ -18,7 +18,7 @@ class JuliaFcn : public ROOT::Minuit2::FCNBase{
     JuliaFcn(fcn_f func) : m_func(func), m_errorDef(1.0) { }
     virtual double Up() const { return m_errorDef; }
     virtual double operator()(const std::vector<double>& par) const { nfcn++; return m_func(par);}
-    void setErrorDef(double def) { m_errorDef = def; }
+    void SetErrorDef(double def) { m_errorDef = def; }
   private:
     fcn_f  m_func;       // the function, from the julia side
     double m_errorDef;   // error definition (chi2 or logL)
@@ -32,10 +32,26 @@ namespace ROOT {
   namespace Minuit2 {
     class MnUserParameterState;
     class MnStrategy;
+    class MnContours;
     FunctionMinimum createFunctionMinimum(const JuliaFcn& fcn, const MnUserParameterState& st,
                                           const MnStrategy& str, double edm_goal);
   }
 }
+
+//---MnContours---------------------------------------------------------------------------------------
+// Use a strucure instead of a pair to avoid CxxWrap problems
+class XYPoint {
+  public:
+    XYPoint(double x, double y) : x(x), y(y) {}
+    XYPoint() : x(0), y(0) {}
+    XYPoint(const XYPoint&) = default;
+    double X() const { return x; }
+    double Y() const { return y; }
+  private:
+    double x;
+    double y;
+};
+std::vector<XYPoint> paren(const ROOT::Minuit2::MnContours& contour, unsigned int i, unsigned int j, unsigned int npoints);
 
 //---Template instantiations-----------------------------------------------------------------------
 //template class std::vector<ROOT::Minuit2::MinimumState>;

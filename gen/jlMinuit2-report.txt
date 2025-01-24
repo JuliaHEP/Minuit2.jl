@@ -41,6 +41,8 @@ ROOT::Minuit2::MnUserTransformation
 ROOT::Minuit2::MinimumSeed
 JuliaFcn
 ROOT::Minuit2::MnStrategy
+XYPoint
+ROOT::Minuit2::MnContours
 ROOT::Minuit2::MnApplication
 ROOT::Minuit2::ModularFunctionMinimizer
 ROOT::Minuit2::MnMigrad
@@ -297,7 +299,7 @@ double ROOT::Minuit2::MinuitParameter::UpperLimit()
 void JuliaFcn::JuliaFcn(fcn_f)
 double JuliaFcn::Up()
 double JuliaFcn::operator()(const std::vector<double> &)
-void JuliaFcn::setErrorDef(double)
+void JuliaFcn::SetErrorDef(double)
 void ROOT::Minuit2::MnStrategy::MnStrategy(unsigned int)
 unsigned int ROOT::Minuit2::MnStrategy::Strategy()
 unsigned int ROOT::Minuit2::MnStrategy::GradientNCycles()
@@ -328,6 +330,14 @@ void ROOT::Minuit2::MnStrategy::SetHessianGradientNCycles(unsigned int)
 void ROOT::Minuit2::MnStrategy::SetHessianCentralFDMixedDerivatives(unsigned int)
 void ROOT::Minuit2::MnStrategy::SetHessianForcePosDef(unsigned int)
 void ROOT::Minuit2::MnStrategy::SetStorageLevel(unsigned int)
+void XYPoint::XYPoint(double, double)
+void XYPoint::XYPoint(const XYPoint &)
+double XYPoint::X()
+double XYPoint::Y()
+void ROOT::Minuit2::MnContours::MnContours(const ROOT::Minuit2::FCNBase &, const ROOT::Minuit2::FunctionMinimum &)
+void ROOT::Minuit2::MnContours::MnContours(const ROOT::Minuit2::FCNBase &, const ROOT::Minuit2::FunctionMinimum &, unsigned int)
+void ROOT::Minuit2::MnContours::MnContours(const ROOT::Minuit2::FCNBase &, const ROOT::Minuit2::FunctionMinimum &, const ROOT::Minuit2::MnStrategy &)
+const ROOT::Minuit2::MnStrategy & ROOT::Minuit2::MnContours::Strategy()
 void ROOT::Minuit2::MnApplication::MnApplication(const ROOT::Minuit2::FCNBase &, const ROOT::Minuit2::MnUserParameterState &, const ROOT::Minuit2::MnStrategy &, unsigned int)
 ROOT::Minuit2::FunctionMinimum ROOT::Minuit2::MnApplication::operator()(unsigned int, double)
 ROOT::Minuit2::ModularFunctionMinimizer & ROOT::Minuit2::MnApplication::Minimizer()
@@ -411,3 +421,4 @@ int ROOT::Minuit2::Mndscal(unsigned int, double, double *, int)
 int ROOT::Minuit2::Mndspmv(const char *, unsigned int, double, const double *, const double *, int, double, double *, int)
 int NIter(const ROOT::Minuit2::FunctionMinimum &)
 ROOT::Minuit2::FunctionMinimum ROOT::Minuit2::createFunctionMinimum(const JuliaFcn &, const ROOT::Minuit2::MnUserParameterState &, const ROOT::Minuit2::MnStrategy &, double)
+std::vector<XYPoint> paren(const ROOT::Minuit2::MnContours &, unsigned int, unsigned int, unsigned int)

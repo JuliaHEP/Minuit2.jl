@@ -32,7 +32,8 @@ input               = [ "Minuit2Wrap.h",
                         "Minuit2/MinosError.h",
                         "Minuit2/LAVector.h",
                         "Minuit2/MnPrint.h",
-                        "Minuit2/MnMachinePrecision.h"
+                        "Minuit2/MnMachinePrecision.h",
+                        "Minuit2/MnContours.h"
                       ]
 
 extra_headers       = [ ]

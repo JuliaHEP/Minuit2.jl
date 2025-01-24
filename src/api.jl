@@ -5,8 +5,8 @@ using Distributions
 
 import Base: values
 
-export Minuit, MinosError, migrad!, hesse!, minos!, contour
-export values, fval, method, nfcn, niter, up, isvalid, matrix, minos, errors, merrors, values
+export Minuit, MinosError, migrad!, hesse!, minos!, contour, mncontour
+export values, fval, method, nfcn, niter, up, isvalid, isfixed, matrix, minos, errors, merrors, values, value
 export name, valid, lower, upper, symmetric
 
 abstract type OptimizationResults end
@@ -30,8 +30,10 @@ mutable struct Minuit
     scfunc::CxxWrap.SafeCFunction               # The safe C function (reference to keep alive)
     x0::AbstractVector                          # Initial parameters values 
     npar::Int                                   # Number of parameters
+    names::Vector{String}                       # Names of the parameters
     method::Symbol                              # The minimization method
-    tolerance::Real                             # The tolerance for the minimization    
+    tolerance::Real                             # The tolerance for the minimization
+    strategy::Int                               # The strategy for the minimization    
     kwargs::Dict{Symbol, Any}                   # Keyword arguments
     userpars::ROOT!Minuit2!MnUserParameterState        # The user parameters
     app::Union{ROOT!Minuit2!MnApplication, Nothing}    # The Minuit application
@@ -43,13 +45,17 @@ function values(m::Minuit)
     state = State(m.app)
     [Value(state, i) for i in 0:m.npar-1]
 end
-
+function value(m::Minuit, key)
+    key isa Int && return Value(State(m.app), key-1)
+    return Value(State(m.app), findfirst(isequal(key), m.names)-1)
+end
 fval(m::Minuit) = Fval(State(m.app))
 method(m::Minuit) = m.method
 nfcn(m::Minuit) = NFcn(m.fmin)
 niter(m::Minuit) = NIter(m.fmin)
 up(m::Minuit) = Up(m.fmin)
 isvalid(m::Minuit) = IsValid(m.fmin)
+isfixed(m::Minuit, ipar) = IsFixed(Parameter(m.app, ipar-1))
 function matrix(m::Minuit; correlation=false)
     state = State(m.app)
     if HasCovariance(state)
@@ -66,20 +72,14 @@ end
 minos(m::Minuit) = m.minos === nothing ? Dict{String, MinosError}() : minos!(m).minos
 minos(m::Minuit, key) = m.minos[key]
 errors(m::Minuit) = [Error(State(m.app), i) for i in 0:m.npar-1]
-merrors(m::Minuit) = [m.minos[Name(m.userpars, i)] for i in 0:m.npar-1]
+merrors(m::Minuit) = [m.minos[key] for key in m.names]
 Base.show(io::IO, m::Dict{String, MinosError}) = show.(io, collect(values(m)))
 
 function normalize_par(m::Minuit, key::Union{Int, String})
-    if isa(key, Int)
-        return key - 1, Name(State(m.app), key-1)
-    end
-    if isa(key, String)
-        names = [Name(State(m.app), i) for i in 0:m.npar-1]
-        if key in names
-            return findfirst(isequal(key), names), key
-        end
-    end
-    throw(ArgumentError("Parameter $key not found"))
+    isa(key, Int) && return key, m.names[key]
+    ikey = findfirst(isequal(key), m.names)
+    ikey === nothing && throw(ArgumentError("Parameter $key not found"))
+    return ikey, key
 end
 
 """
@@ -104,7 +104,7 @@ function get_nargs(f)
 end
 
 """
-    Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0, kwargs...)
+    Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0, strategy=1,  kwargs...)
 
 Initialize a Minuit object.
 
@@ -190,7 +190,7 @@ Setting the values with keywords is not possible in this case. Minuit
 deduces the number of parameters from the length of the initialization
 sequence.
 """
-function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0.1, kwargs...)
+function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0.1, strategy=1, kwargs...)
     #---Check if the function has a list of parameters or a single array---------------------------
     if get_nargs(fcn) == 1 && length(x0) > 1   # vector form
         vf = fcn
@@ -210,7 +210,7 @@ function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), meth
          end )
     jf = JuliaFcn(sf)
     #---Set the error definition-------------------------------------------------------------------
-    errordef != 1.0 && SetErrorDef(jf, errordef)
+    SetErrorDef(jf, errordef)
     funcname = string(first(methods(fcn)))
     funcname = funcname[1:findfirst('@',funcname)-2]
     # If x0 is not provided, use the keyword arguments of the form <par>=<value>-------------------
@@ -238,8 +238,9 @@ function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), meth
         haskey(kwargs, Symbol("fix_", name)) && Fix(userpars, i-1)
     end
     kwargs = Dict(:method=>method, :maxfcn=>maxfcn, :tolerance=>tolerance)
+    names = [Name(userpars, i-1) for i in 1:npar]
     #migrad = ROOT!Minuit2!MnMigrad(jf, userpars)
-    Minuit(funcname, jf, sf, x0, npar, method, tolerance, kwargs, userpars, nothing, nothing, nothing)
+    Minuit(funcname, jf, sf, x0, npar, names, method, tolerance, strategy, kwargs, userpars, nothing, nothing, nothing)
 end
 
 function Base.show(io::IO, m::Minuit)
@@ -264,15 +265,15 @@ function Base.show(io::IO, m::Minuit)
         npar     = m.npar
         mnpars = [Parameter(m.app, i) for i in 0:npar-1]
         header = ["Name", "Value", "Hesse Error",  "Minos-", "Minos+", "Limit-", "Limit+", "Fixed"]
-        names = [Name(userpars, i) for i in 0:npar-1]
+        names = m.names
         values = [Value(userpars, i) for i in 0:npar-1]
         errors = [Error(userpars, i) for i in 0 : npar-1]
         if m.minos === nothing
             minos_err_low = [ " " for i in 0:npar-1]
             minos_err_high = [ " " for i in 0:npar-1]
         else
-            minos_err_low = [ haskey(m.minos,Name(userpars, i-1)) ? m.minos[Name(userpars, i-1)].lower : " " for i in 1:npar]
-            minos_err_high = [ haskey(m.minos,Name(userpars, i-1)) ? m.minos[Name(userpars, i-1)].upper : " " for i in 1:npar]
+            minos_err_low = [ haskey(m.minos,names[i]) ? m.minos[names[i]].lower : " " for i in 1:npar]
+            minos_err_high = [ haskey(m.minos,names[i]) ? m.minos[names[i]].upper : " " for i in 1:npar]
         end
         limit_low = [ HasLowerLimit(mnpars[i]) ? LowerLimit(mnpars[i]) : " " for i in 1:npar]
         limit_up = [ HasUpperLimit(mnpars[i]) ? UpperLimit(mnpars[i]) : " " for i in 1:npar]
@@ -306,6 +307,7 @@ function migrad!(m::Minuit, strategy=1)
     m.app = migrad
     m.fmin = min
     m.minos = nothing
+    m.strategy = strategy
     return m
 end
 
@@ -349,6 +351,7 @@ function hesse!(m::Minuit; strategy=1, maxcalls=0)
     #---Update the Minuit object with the results---------------------------------------------------
     #fmin = ROOT!Minuit2!createFunctionMinimum(m.fcn, State(m.app), ROOT!Minuit2!MnStrategy(strategy), edm_goal(m, migrad_factor=true))
     #m.fmin = fmin
+    m.strategy = strategy
     return m
 end
 
@@ -404,12 +407,12 @@ function minos!(m::Minuit; cl=0.68, ncall=0, parameters=(), strategy=1)
     end
     #---Get the parameters to run Minos-------------------------------------------------------------
     if length(parameters) == 0
-        ipars = [ipar for ipar in 0:m.npar-1 if !IsFixed(Parameter(State(m.app), ipar))]
+        ipars = [ipar for ipar in 1:m.npar if !isfixed(m, ipar)]
     else
         ipars = []
         for par in parameters
             ip, pname = normalize_par(m, par)
-            if IsFixed(Parameter(State(m.app), ip))
+            if isfixed(m, ip)
                 warn("Cannot scan over fixed parameter $pname")
             else
                 push!(ipars, ip)
@@ -420,11 +423,12 @@ function minos!(m::Minuit; cl=0.68, ncall=0, parameters=(), strategy=1)
     minos = ROOT!Minuit2!MnMinos(m.fcn, m.fmin, strategy)
     merrors = Dict{String, MinosError}()
     for ipar in ipars
-        mn = Minos(minos, ipar, ncall, m.tolerance)
-        me = MinosError(ipar, Name(m.userpars, ipar), IsValid(mn), Lower(mn), Upper(mn), mn)
-        merrors[Name(m.userpars, ipar)] = me
+        mn = Minos(minos, ipar-1, ncall, m.tolerance)
+        me = MinosError(ipar, m.names[ipar], IsValid(mn), Lower(mn), Upper(mn), mn)
+        merrors[m.names[ipar]] = me
     end
     m.minos = merrors
+    m.strategy = strategy
     return m
 end
 
@@ -470,6 +474,8 @@ function contour(m::Minuit, x, y; size=50, bound=2, grid=nothing, subtract_min=f
     ix, xname = normalize_par(m, x)
     iy, yname = normalize_par(m, y)
 
+    @show ix, iy, xname, yname
+
     if !isnothing(grid)
         xv, yv = grid
         ndims(xv) == 1 || ndims(yv) || throw(ArgumentError("grid per parameter must be 1D array-like"))
@@ -499,5 +505,97 @@ function contour(m::Minuit, x, y; size=50, bound=2, grid=nothing, subtract_min=f
             zv[i, j] = paren(m.fcn, values_v)
         end
     end
+    if subtract_min
+        zv .-= minimum(zv)
+    end
     return xv, yv, zv
 end
+
+"""
+    nmcontour(x, y; cl=0.68, size=50, interpolated=0, ncall=0, iterate=5, use_simplex=true)
+
+Get 2D Minos confidence region.
+
+This scans over two parameters and minimises all other free parameters for each
+scan point. This scan produces a statistical confidence region according to the
+[profile likelihood method](https://en.wikipedia.org/wiki/Likelihood_function)
+with a confidence level `cl`, which is asymptotically equal to the coverage
+probability of the confidence region according to [Wilks' theorem](https://en.wikipedia.org/wiki/Wilks%27_theorem).
+Note that 1D projections of the 2D confidence region are larger than 1D Minos intervals computed for the
+same confidence level. This is not an error, but a consequence of Wilks'theorem.
+
+The calculation is expensive since a numerical minimisation has to be performed at various points.
+
+## Arguments
+- `x` : Variable name of the first parameter.
+- `y` : Variable name of the second parameter.
+- `cl::Real=0.68` : Confidence level of the contour. If not set a standard 68 % contour
+  is computed (default). If 0 < cl < 1, the value is interpreted as the
+  confidence level (a probability). For convenience, values cl >= 1 are
+  interpreted as the probability content of a central symmetric interval
+  covering that many standard deviations of a normal distribution.
+- `size::Int=50` : Number of points on the contour to find. Increasing this
+  makes the contour smoother, but requires more computation time.
+- `interpolated::Int=0` : Number of interpolated points on the contour. If you set this
+  to a value larger than size, cubic spline interpolation is used to generate
+  a smoother curve and the interpolated coordinates are returned. Values
+  smaller than size are ignored. Good results can be obtained with size=20,
+  interpolated=200.
+
+## Returns
+- `contour::Vector(Tuple{Float64,Float64})` : Contour points of the form [(x1, y1)...(xn, yn)].
+"""
+function mncontour(m::Minuit, x, y; cl=0.68, size=50, interpolated=0)
+    ix, xname = normalize_par(m, x)
+    iy, yname = normalize_par(m, y)
+
+    cl >= 1.0 && (cl = cdf(Chisq(1), cl^2))    # convert sigmas into confidence level
+    factor = quantile(Chisq(2), cl)            # convert confidence level to errordef
+
+    isvalid(m) || throw(ErrorException("Function minimum is not valid: $(m.fmin)"))
+    isfixed(m, ix) && throw(ErrorException("Cannot scan over fixed parameter $xname"))
+    isfixed(m, iy) && throw(ErrorException("Cannot scan over fixed parameter $yname"))
+
+    # Set temporary errordef before calling MnContours
+    sav_errordef = Up(m.fcn)
+    mnc = nothing
+    try
+        SetErrorDef(m.fcn, sav_errordef * factor)
+        @show factor, Up(m.fcn)
+        mnc = ROOT!Minuit2!MnContours(m.fcn, m.fmin, m.strategy)
+    finally
+        SetErrorDef(m.fcn, sav_errordef)
+    end
+    
+    points = paren(mnc, ix-1, iy-1, size)
+    contour = [ (X(p), Y(p)) for p in points]
+    push!(contour, contour[1])  # close the contour
+
+    if interpolated > size
+        @warn "Interpolation not yet implemented"
+    end
+    return contour
+end
+
+
+#=
+    else:
+        with _TemporaryErrordef(self._fcn, factor):
+            assert self._fmin is not None
+            mnc = MnContours(self._fcn, self._fmin._src, self.strategy)
+            ce = mnc(ix, iy, size)[2]
+
+    pts = np.asarray(ce)
+    # add starting point at end to close the contour
+    pts = np.append(pts, pts[:1], axis=0)
+
+    if interpolated > size:
+        with optional_module_for("interpolation"):
+            from scipy.interpolate import CubicSpline
+
+            xg = np.linspace(0, 1, len(pts))
+            spl = CubicSpline(xg, pts, bc_type="periodic")
+            pts = spl(np.linspace(0, 1, interpolated))
+    return pts
+end
+=#
