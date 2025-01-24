@@ -3,8 +3,10 @@ using PrettyTables
 using LinearAlgebra
 using Distributions
 
-export Minuit, MinosError, migrad!, hesse!, minos!
-export values, fval, method, nfcn, niter, up, isvalid, matrix, minos, errors, merrors
+import Base: values
+
+export Minuit, MinosError, migrad!, hesse!, minos!, contour
+export values, fval, method, nfcn, niter, up, isvalid, matrix, minos, errors, merrors, values
 export name, valid, lower, upper, symmetric
 
 abstract type OptimizationResults end
@@ -37,7 +39,7 @@ mutable struct Minuit
     minos::Union{Dict{String, MinosError}, Nothing}    # The Minos errors
 end
 
-function Base.values(m::Minuit)
+function values(m::Minuit)
     state = State(m.app)
     [Value(state, i) for i in 0:m.npar-1]
 end
@@ -438,7 +440,7 @@ function Base.show(io::IO, me::MinosError)
 end
 
 """
-    contour(m::Minuit, x, y; size=50, bound=2, grid=(), subtract_min=false)
+    contour(m::Minuit, x, y; size=50, bound=2, grid=nothing, subtract_min=false)
 
 Get a 2D contour of the function around the minimum.
 
@@ -453,41 +455,49 @@ function only has two parameters. Use :meth:`mncontour` to compute confidence
 regions.
 
 ## Arguments
-    x : int or str
-        First parameter for scan.
-    y : int or str
-        Second parameter for scan.
-    size : int or tuple of int, optional
-        Number of scanning points per parameter (Default: 50). A tuple is
-        interpreted as the number of scanning points per parameter.
-        Ignored if grid is set.
-    bound : float or tuple of floats, optional
-        If bound is 2x2 array, [[v1min,v1max],[v2min,v2max]].
-        If bound is a number, it specifies how many :math:`\sigma`
-        symmetrically from minimum (minimum+- bound*:math:`\sigma`).
-        (Default: 2). Ignored if grid is set.
-    grid : tuple of array-like, optional
-        Grid points to scan over. If grid is set, size and bound are ignored.
-    subtract_min :
-        Subtract minimum from return values (Default: False).
+- `x` : First parameter for scan (name or index).
+- `y``: Second parameter for scan (name or index).
+- `size=50` : Number of scanning points per parameter (Default: 50). It can be tuple `(nx,ny)` as 
+           the number of scanning points per parameter. Ignored if `grid` is set.
+- `bound=2` : Either ((v1min,v1max),(v2min,v2max)) or the number of `sigma`s to scan symmetrically from minimum.
+- `grid::Tuple{AbstractVector,AbstractVector} : Grid points to scan over. If `grid`` is set, `size`` and `bound` are ignored.
+- `subtract_min::Bool=false` : Subtract minimum from return values
 
 ##  Returns
-    array of float
-        Parameter values of first parameter.
-    array of float
-        Parameter values of second parameter.
-    2D array of float
-        Function values.
-
-        x: Union[int, str],
-        y: Union[int, str],
-        *,
-        size: int = 50,
-        bound: Union[float, Iterable[Tuple[float, float]]] = 2,
-        grid: Tuple[ArrayLike, ArrayLike] = None,
-        subtract_min: bool = False,
-
+- Tuple(`xv`, `yv`, `zv`) : Tuple of 1D arrays with the x and y values and a 2D array with the function values. 
 """
-function contour(m::Minuit, x, y; numpoints=100, sigma=1, cl=0.68, ncall=0, strategy=1)
+function contour(m::Minuit, x, y; size=50, bound=2, grid=nothing, subtract_min=false)
+    ix, xname = normalize_par(m, x)
+    iy, yname = normalize_par(m, y)
 
+    if !isnothing(grid)
+        xv, yv = grid
+        ndims(xv) == 1 || ndims(yv) || throw(ArgumentError("grid per parameter must be 1D array-like"))
+    else
+        if bound isa Tuple || bound isa Tuple
+            xrange, yrange = bound
+        else
+            start = values(m)
+            sigma = errors(m)
+            xrange = ( start[ix] - bound * sigma[ix], start[ix] + bound * sigma[ix])
+            yrange = ( start[iy] - bound * sigma[iy], start[iy] + bound * sigma[iy])
+        end
+        if size isa Tuple || size isa Tuple
+            xsize, ysize = size
+        else
+            xsize = ysize = size
+        end    
+        xv = range(xrange[1], xrange[2], length=xsize)
+        yv = range(yrange[1], yrange[2], length=ysize)
+    end
+    zv = zeros(Float64, length(xv), length(yv))
+    values_v = StdVector(values(m))
+    for i in eachindex(xv)
+        values_v[ix] = xv[i]
+        for j in eachindex(yv)
+            values_v[iy] = yv[j]
+            zv[i, j] = paren(m.fcn, values_v)
+        end
+    end
+    return xv, yv, zv
 end
