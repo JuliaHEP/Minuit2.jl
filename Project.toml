@@ -9,10 +9,14 @@ Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Minuit2_jll = "683d4edd-6ccf-5a74-985b-ebee5a2d6cb7"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
-WrapIt = "962878d8-9763-11ee-8c14-fbf60c98afae"
+
+[weakdeps]
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+
+[extensions]
+Minuit2PlotsExt = "Plots"
 
 [compat]
 CxxWrap = "0.16"
@@ -28,6 +32,9 @@ julia = "1.9"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+WrapIt = "962878d8-9763-11ee-8c14-fbf60c98afae"
 
 [targets]
 test = ["Test", "StatsBase", "LinearAlgebra"]
+gen = ["WrapIt"]
+

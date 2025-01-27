@@ -5,7 +5,7 @@ using Distributions
 
 import Base: values
 
-export Minuit, MinosError, migrad!, hesse!, minos!, contour, mncontour
+export Minuit, MinosError, migrad!, hesse!, minos!, contour, mncontour, profile, mnprofile
 export values, fval, method, nfcn, niter, up, isvalid, isfixed, matrix, minos, errors, merrors, values, value
 export name, valid, lower, upper, symmetric
 
@@ -33,6 +33,7 @@ mutable struct Minuit
     names::Vector{String}                       # Names of the parameters
     method::Symbol                              # The minimization method
     tolerance::Real                             # The tolerance for the minimization
+    precision::Union{Real,Nothing}              # The precision for the minimization
     strategy::Int                               # The strategy for the minimization    
     kwargs::Dict{Symbol, Any}                   # Keyword arguments
     userpars::ROOT!Minuit2!MnUserParameterState        # The user parameters
@@ -190,7 +191,8 @@ Setting the values with keywords is not possible in this case. Minuit
 deduces the number of parameters from the length of the initialization
 sequence.
 """
-function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0.1, strategy=1, kwargs...)
+function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, 
+                tolerance=0.1, precision=nothing, strategy=1, kwargs...)
     #---Check if the function has a list of parameters or a single array---------------------------
     if get_nargs(fcn) == 1 && length(x0) > 1   # vector form
         vf = fcn
@@ -240,7 +242,7 @@ function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), meth
     kwargs = Dict(:method=>method, :maxfcn=>maxfcn, :tolerance=>tolerance)
     names = [Name(userpars, i-1) for i in 1:npar]
     #migrad = ROOT!Minuit2!MnMigrad(jf, userpars)
-    Minuit(funcname, jf, sf, x0, npar, names, method, tolerance, strategy, kwargs, userpars, nothing, nothing, nothing)
+    Minuit(funcname, jf, sf, x0, npar, names, method, tolerance, precision, strategy, kwargs, userpars, nothing, nothing, nothing)
 end
 
 function Base.show(io::IO, m::Minuit)
@@ -558,16 +560,15 @@ function mncontour(m::Minuit, x, y; cl=0.68, size=50, interpolated=0)
 
     # Set temporary errordef before calling MnContours
     sav_errordef = Up(m.fcn)
-    mnc = nothing
+    points = nothing
     try
         SetErrorDef(m.fcn, sav_errordef * factor)
-        @show factor, Up(m.fcn)
         mnc = ROOT!Minuit2!MnContours(m.fcn, m.fmin, m.strategy)
+        points = paren(mnc, ix-1, iy-1, size)
     finally
         SetErrorDef(m.fcn, sav_errordef)
     end
-    
-    points = paren(mnc, ix-1, iy-1, size)
+
     contour = [ (X(p), Y(p)) for p in points]
     push!(contour, contour[1])  # close the contour
 
@@ -577,25 +578,186 @@ function mncontour(m::Minuit, x, y; cl=0.68, size=50, interpolated=0)
     return contour
 end
 
+"""
+    profile(m::Minuit, var; size=100, bound=2, grid=nothing, subtract_min=false)
+            
+Calculate 1D cost function profile over a range.
+
+A 1D scan of the cost function around the minimum, useful to inspect the
+minimum. For a fit with several free parameters this is not the same as the
+Minos profile computed by `mncontour`.
+
+## Arguments
+- `m::Minuit` : The Minuit object to minimize.
+- `var` : The parameter to scan over (name or index).
+- `size=100` : Number of scanning points. Ignored if `grid` is set.
+- `bound=2` : Number of `sigma`s to scan symmetrically around the minimum. Ignored if `grid` is set.
+- `grid::AbstractVector` : Grid points to scan over. If `grid` is set, `size` and `bound` are ignored.
+- `subtract_min::Bool=false` : Subtract minimum from return values.
+
+## Returns
+- Tuple(`x`, `y`) : Tuple of 1D arrays with the parameter values and the function values.
+"""
+function profile(m::Minuit, var; size=100, bound=2, grid=nothing, subtract_min=false)
+
+    ipar, pname = normalize_par(m, var)
+    isfixed(m, ipar) && throw(ErrorException("Cannot profile over fixed parameter $pname"))
+    if !isnothing(grid)
+        x = grid
+        ndims(x) != 1 && throw(ArgumentError("grid must be 1D array-like"))
+    else
+        start = values(m)[ipar]
+        sigma= errors(m)[ipar]
+        x = range(start - bound * sigma, start + bound * sigma, length=size)
+    end
+
+    y = zeros(Float64, length(x))
+    values_v = StdVector(values(m))
+    for i in eachindex(x)
+        values_v[ipar] = x[i]
+        y[i] = paren(m.fcn, values_v)
+    end
+    if subtract_min
+        y .-= minimum(y)
+    end
+    return x, y
+end
+
+
+"""
+    mnprofile(m::Minuit, var; size=30, bound=2, grid=nothing, subtract_min=false, 
+                   ncall=0, iterate=5, use_simplex=true)
+
+Get Minos profile over a specified interval.
+
+Scans over one parameter and minimises the function with respect to all other
+parameters for each scan point.
+
+## Arguments
+- `var` : Parameter to scan over.
+- `size=30` : Number of scanning points. Ignored if grid is set.
+- `bound=2` : If bound is a tuple, (left, right) scanning bound, or the number of sigmas to scan
+  symmetrically around the minimum. Ignored if grid is set.
+- `grid` : Parameter values on which to compute the profile. If `grid` is set, `size` and
+   `bound` are ignored.
+- `subtract_min=false` : If true, subtract offset so that smallest value is zero.
+- `ncall=0` : Approximate maximum number of calls before minimization will be aborted.
+   If set to 0, use the adaptive heuristic from the Minuit2 library. 
+   Note: The limit may be slightly violated, because the condition is checked only after 
+   a full iteration of the algorithm, which usually performs several function calls.
+        iterate : int, optional
+            Automatically call Migrad up to N times if convergence was not reached
+            (Default: 5). This simple heuristic makes Migrad converge more often even if
+            the numerical precision of the cost function is low. Setting this to 1
+            disables the feature.
+        use_simplex: bool, optional
+            If we have to iterate, set this to True to call the Simplex algorithm before
+            each call to Migrad (Default: True). This may improve convergence in
+            pathological cases (which we are in when we have to iterate).
+## Returns
+- Tuple(`x`, `y`, `ok`) : Tuple of 1D arrays with the parameter values, function values and
+  booleans whether the fit succeeded or not.
+"""
+function mnprofile(m::Minuit, var; size=30, bound=2, grid=nothing, subtract_min=false, 
+                   ncall=0, iterate=5, use_simplex=true)
+
+    ipar, pname = normalize_par(m, var)
+    if !isnothing(grid)
+        x = grid
+        ndims(x) != 1 && throw(ArgumentError("grid must be 1D array-like"))
+    else
+        if bound isa Tuple
+            xrange= bound
+        else
+            start = values(m)[ipar]
+            sigma= errors(m)[ipar]
+            xrange = start - bound * sigma, start + bound * sigma
+        end
+        x = range(xrange..., length=size)
+    end
+    y = zeros(Float64, length(x))
+    status = zeros(Bool, length(x))
+
+    state = ROOT!Minuit2!createMnUserParameterState(UserState(m.fmin))  # copy
+    Fix(state, ipar-1)  # fix the parameter we are scanning over
+    # strategy 0 to avoid expensive computation of Hesse matrix
+    strategy = ROOT!Minuit2!MnStrategy(0)
+    for (i,v) in enumerate(x)
+        @show i, v
+        SetValue(state, ipar, v)
+        fmin = robust_low_level_fit(m.fcn, state, ncall, strategy, m.tolerance, m.precision, iterate, use_simplex)
+        IsValid(fmin) || @warn("MIGRAD fails to converge for $pname=$v")
+        status[i] = IsValid(fmin)
+        y[i] = Fval(fmin)
+    end
+    subtract_min && (y .-= minimum(y))
+    return x, y, status
+end
+
+"""
+    robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision, iterate, use_simplex)
+"""
+function robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision, iterate, use_simplex)
+    migrad = ROOT!Minuit2!MnMigrad(fcn, state, strategy)
+    isnothing(precision) || SetPrecision(migrad, precision)
+    fmin = paren(migrad, ncall, tolerance)
+    #=
+    strategy = ROOT!Minuit2!MnStrategy(2)
+    migrad = ROOT!Minuit2!MnMigrad(fcn, UserState(fmin), strategy)
+    while !IsValid(fmin) && !HasReachedCallLimit(fmin) && iterate > 1
+        if use_simplex
+            simplex = ROOT!Minuit2!MnSimplex(fcn, State(fmin), strategy)
+            if !isnothing(precision)
+                simplex.precision = precision
+            end
+            fmin = paren(simplex, ncall, tolerance)
+            migrad = ROOT!Minuit2!MnMigrad(fcn, State(fmin), strategy)
+        end
+        if !isnothing(precision)
+            migrad.precision = precision
+        end
+        fmin = paren(migrad, ncall, tolerance)
+        iterate -= 1
+    end
+    =#
+    return fmin
+end
 
 #=
-    else:
-        with _TemporaryErrordef(self._fcn, factor):
-            assert self._fmin is not None
-            mnc = MnContours(self._fcn, self._fmin._src, self.strategy)
-            ce = mnc(ix, iy, size)[2]
+def _robust_low_level_fit(
+    fcn: FCN,
+    state: MnUserParameterState,
+    ncall: int,
+    strategy: MnStrategy,
+    tolerance: float,
+    precision: Optional[float],
+    iterate: int,
+    use_simplex: bool,
+) -> FunctionMinimum:
+    # Automatically call Migrad up to `iterate` times if minimum is not valid.
+    # This simple heuristic makes Migrad converge more often. Optionally,
+    # one can interleave calls to Simplex and Migrad, which may also help.
+    migrad = MnMigrad(fcn, state, strategy)
+    if precision is not None:
+        migrad.precision = precision
+    fm = migrad(ncall, tolerance)
+    strategy = MnStrategy(2)
+    migrad = MnMigrad(fcn, fm.state, strategy)
+    while not fm.is_valid and not fm.has_reached_call_limit and iterate > 1:
+        # If we have to iterate, we have a pathological case. Increasing the
+        # strategy to 2 in this case was found to be beneficial.
+        if use_simplex:
+            simplex = MnSimplex(fcn, fm.state, strategy)
+            if precision is not None:
+                simplex.precision = precision
+            fm = simplex(ncall, tolerance)
+            # recreate MnMigrad instance to start from updated state
+            migrad = MnMigrad(fcn, fm.state, strategy)
+        # workaround: precision must be set again after each call
+        if precision is not None:
+            migrad.precision = precision
+        fm = migrad(ncall, tolerance)
+        iterate -= 1
+    return fm
 
-    pts = np.asarray(ce)
-    # add starting point at end to close the contour
-    pts = np.append(pts, pts[:1], axis=0)
-
-    if interpolated > size:
-        with optional_module_for("interpolation"):
-            from scipy.interpolate import CubicSpline
-
-            xg = np.linspace(0, 1, len(pts))
-            spl = CubicSpline(xg, pts, bc_type="periodic")
-            pts = spl(np.linspace(0, 1, interpolated))
-    return pts
-end
 =#

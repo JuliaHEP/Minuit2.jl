@@ -22,10 +22,11 @@ export ROOT!Minuit2!MnPrint!Verbosity, ROOT!Minuit2!MnPrint!Verbosity!Debug, ROO
 export ROOT!Minuit2!MnPrint!Verbosity!Trace, ROOT!Minuit2!MnPrint!Verbosity!Warn, ROOT!Minuit2!MnPrint!eDebug, ROOT!Minuit2!MnPrint!eError
 export ROOT!Minuit2!MnPrint!eInfo, ROOT!Minuit2!MnPrint!eTrace, ROOT!Minuit2!MnPrint!eWarn, ROOT!Minuit2!MnStrategy, ROOT!Minuit2!MnUserCovariance
 export ROOT!Minuit2!MnUserParameterState, ROOT!Minuit2!MnUserParameters, ROOT!Minuit2!MnUserTransformation, ROOT!Minuit2!Mndaxpy, ROOT!Minuit2!Mndscal
-export ROOT!Minuit2!Mndspmv, ROOT!Minuit2!ModularFunctionMinimizer, ROOT!Minuit2!createFunctionMinimum, Release, RemoveLimits, Scale, Seed
-export SetError, SetErrorDef, SetGradientNCycles, SetGradientStepTolerance, SetGradientTolerance
-export SetHessianCentralFDMixedDerivatives, SetHessianForcePosDef, SetHessianG2Tolerance, SetHessianGradientNCycles, SetHessianNCycles
-export SetHessianStepTolerance, SetHighStrategy, SetLevel, SetLimits, SetLowStrategy, SetLowerLimit, SetMediumStrategy, SetName, SetPrecision
-export SetStorageLevel, SetUpperLimit, SetValue, SetVeryHighStrategy, State, StorageLevel, Strategy, TolerG2, Tolerstp, Trafo, Up
-export Upper, UpperLimit, UpperNewMin, UpperState, UpperValid, Upval, UserCovariance, UserParameters, UserState, Value
-export VariableParameters, Vec, X, XYPoint, Y, add!, assign, gradParameterSpace, mult!, nfcn, nfcn!, paren, size, std!pair, sub!
+export ROOT!Minuit2!Mndspmv, ROOT!Minuit2!ModularFunctionMinimizer, ROOT!Minuit2!createFunctionMinimum
+export ROOT!Minuit2!createMnUserParameterState, Release, RemoveLimits, Scale, Seed, SetError, SetErrorDef, SetGradientNCycles, SetGradientStepTolerance
+export SetGradientTolerance, SetHessianCentralFDMixedDerivatives, SetHessianForcePosDef, SetHessianG2Tolerance, SetHessianGradientNCycles
+export SetHessianNCycles, SetHessianStepTolerance, SetHighStrategy, SetLevel, SetLimits, SetLowStrategy, SetLowerLimit, SetMediumStrategy
+export SetName, SetPrecision, SetStorageLevel, SetUpperLimit, SetValue, SetVeryHighStrategy, State, StorageLevel, Strategy
+export TolerG2, Tolerstp, Trafo, Up, Upper, UpperLimit, UpperNewMin, UpperState, UpperValid, Upval, UserCovariance
+export UserParameters, UserState, Value, VariableParameters, Vec, X, XYPoint, Y, add!, assign, gradParameterSpace, mult!, nfcn, nfcn!
+export paren, size, std!pair, sub!

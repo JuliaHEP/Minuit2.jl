@@ -35,6 +35,7 @@ namespace ROOT {
     class MnContours;
     FunctionMinimum createFunctionMinimum(const JuliaFcn& fcn, const MnUserParameterState& st,
                                           const MnStrategy& str, double edm_goal);
+    MnUserParameterState createMnUserParameterState(const MnUserParameterState& state);  
   }
 }
 

@@ -30,6 +30,10 @@ FunctionMinimum ROOT::Minuit2::createFunctionMinimum(const JuliaFcn& fcn, const 
   return FunctionMinimum(seed, minstv, fcn.Up(), FunctionMinimum::MnAboveMaxEdm);
 }
 
+MnUserParameterState ROOT::Minuit2::createMnUserParameterState(const MnUserParameterState& state) {
+  return MnUserParameterState(state);
+}
+
 std::vector<XYPoint> paren(const ROOT::Minuit2::MnContours& contour, unsigned int i, unsigned int j, unsigned int npoints) {
   std::vector<XYPoint> result;
   auto points = contour(i, j, npoints);

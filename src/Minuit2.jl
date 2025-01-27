@@ -19,5 +19,11 @@ module Minuit2
     end
 
     include("api.jl")
+
+    export draw_contour, draw_mncontour, draw_profile, draw_mnprofile
+    function draw_contour end
+    function draw_mncontour end
+    function draw_profile end
+    function draw_mnprofile end
 end
 
