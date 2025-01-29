@@ -50,9 +50,11 @@ ROOT::Minuit2::MnHesse
 ROOT::Minuit2::MnFcn
 ROOT::Minuit2::MnMinos
 ROOT::Minuit2::MnCross
+ROOT::Minuit2::MnSimplex
 ROOT::Minuit2::MnCross::CrossParLimit
 ROOT::Minuit2::MnCross::CrossFcnLimit
 ROOT::Minuit2::MnCross::CrossNewMin
+ROOT::Minuit2::MnScan
 
 
 
@@ -176,6 +178,9 @@ void ROOT::Minuit2::MnUserCovariance::Scale(double)
 const std::vector<double> & ROOT::Minuit2::MnUserCovariance::Data()
 unsigned int ROOT::Minuit2::MnUserCovariance::Nrow()
 unsigned int ROOT::Minuit2::MnUserCovariance::size()
+void ROOT::Minuit2::MnGlobalCorrelationCoeff::MnGlobalCorrelationCoeff(const ROOT::Minuit2::MnAlgebraicSymMatrix &)
+const std::vector<double> & ROOT::Minuit2::MnGlobalCorrelationCoeff::GlobalCC()
+bool ROOT::Minuit2::MnGlobalCorrelationCoeff::IsValid()
 void ROOT::Minuit2::MnUserParameterState::MnUserParameterState(const ROOT::Minuit2::MnUserParameters &)
 void ROOT::Minuit2::MnUserParameterState::MnUserParameterState(const ROOT::Minuit2::MnUserParameters &, const ROOT::Minuit2::MnUserCovariance &)
 void ROOT::Minuit2::MnUserParameterState::MnUserParameterState(const ROOT::Minuit2::MinimumState &, double, const ROOT::Minuit2::MnUserTransformation &)
@@ -296,10 +301,15 @@ bool ROOT::Minuit2::MinuitParameter::HasLowerLimit()
 bool ROOT::Minuit2::MinuitParameter::HasUpperLimit()
 double ROOT::Minuit2::MinuitParameter::LowerLimit()
 double ROOT::Minuit2::MinuitParameter::UpperLimit()
-void JuliaFcn::JuliaFcn(fcn_f)
+void JuliaFcn::JuliaFcn(fcn_f, double)
+void JuliaFcn::JuliaFcn(fcn_f, fcn_g, double)
 double JuliaFcn::Up()
 double JuliaFcn::operator()(const std::vector<double> &)
+std::vector<double> JuliaFcn::Gradient(const std::vector<double> &)
+bool JuliaFcn::HasGradient()
 void JuliaFcn::SetErrorDef(double)
+unsigned int JuliaFcn::Nfcn()
+unsigned int JuliaFcn::Ngrad()
 void ROOT::Minuit2::MnStrategy::MnStrategy(unsigned int)
 unsigned int ROOT::Minuit2::MnStrategy::Strategy()
 unsigned int ROOT::Minuit2::MnStrategy::GradientNCycles()
@@ -416,6 +426,14 @@ bool ROOT::Minuit2::MnCross::AtLimit()
 bool ROOT::Minuit2::MnCross::AtMaxFcn()
 bool ROOT::Minuit2::MnCross::NewMinimum()
 unsigned int ROOT::Minuit2::MnCross::NFcn()
+void ROOT::Minuit2::MnSimplex::MnSimplex(const ROOT::Minuit2::FCNBase &, const ROOT::Minuit2::MnUserParameterState &, const ROOT::Minuit2::MnStrategy &)
+void ROOT::Minuit2::MnSimplex::MnSimplex(const ROOT::Minuit2::MnSimplex &)
+ROOT::Minuit2::ModularFunctionMinimizer & ROOT::Minuit2::MnSimplex::Minimizer()
+const ROOT::Minuit2::ModularFunctionMinimizer & ROOT::Minuit2::MnSimplex::Minimizer()
+void ROOT::Minuit2::MnScan::MnScan(const ROOT::Minuit2::FCNBase &, const ROOT::Minuit2::MnUserParameterState &, const ROOT::Minuit2::MnStrategy &)
+void ROOT::Minuit2::MnScan::MnScan(const ROOT::Minuit2::MnScan &)
+ROOT::Minuit2::ModularFunctionMinimizer & ROOT::Minuit2::MnScan::Minimizer()
+const ROOT::Minuit2::ModularFunctionMinimizer & ROOT::Minuit2::MnScan::Minimizer()
 int ROOT::Minuit2::Mndaxpy(unsigned int, double, const double *, int, double *, int)
 int ROOT::Minuit2::Mndscal(unsigned int, double, double *, int)
 int ROOT::Minuit2::Mndspmv(const char *, unsigned int, double, const double *, const double *, int, double, double *, int)

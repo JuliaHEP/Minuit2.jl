@@ -11,8 +11,8 @@ Draw 2D minimal region (requires Plots module).
 
 """
 function Minuit2.draw_contour(m::Minuit, x, y; bound=4, subtract_min=false, kwargs...)
-    ix, xname = Minuit2.normalize_par(m, x)
-    iy, yname = Minuit2.normalize_par(m, y)
+    ix, xname = Minuit2.keypair(m, x)
+    iy, yname = Minuit2.keypair(m, y)
 
     xv, yv, zv = Minuit2.contour(m, ix, iy, bound=bound, subtract_min=subtract_min)
     vx, vy = values(m)[ix], Minuit2.values(m)[iy]
@@ -26,8 +26,8 @@ end
 Draw 2D Minos confidence region (requires Plots module).
 """
 function Minuit2.draw_mncontour(m::Minuit, x, y; cl = 1:4, size=50, kwargs...)
-    ix, xname = Minuit2.normalize_par(m, x)
-    iy, yname = Minuit2.normalize_par(m, y)
+    ix, xname = Minuit2.keypair(m, x)
+    iy, yname = Minuit2.keypair(m, y)
 
     title = "MnContour $(m.funcname) for $(xname) vs $(yname)"
     plt = nothing
@@ -54,12 +54,12 @@ Draw 1D cost function profile over a range (requires matplotlib).
 - `text::Bool=true` : If true, show text a title with the function value and the Hesse error.
 """
 function Minuit2.draw_profile(m::Minuit, var; band=true, text=true, kwargs...)
-    ix, xname = Minuit2.normalize_par(m, var)
+    ix, xname = Minuit2.keypair(m, var)
     x, y = profile(m, ix; subtract_min=true, kwargs...)
     v = values(m)[ix]
     e = errors(m)[ix]
     title = text ? "$xname= $(round(v, digits=3)) - $(round(e, digits=3)) + $(round(e, digits=3))" : nothing
-    plt = plot(x, y; title=title, label=m.funcname, xlabel=xname)
+    plt = plot(x, y; title=title, label=m.funcname, xlabel=xname, ylabel="FCN")
     vline!(plt, [v]; label=nothing, color=:black)
     band && vspan!(plt, [v - e, v + e]; label=nothing, color=:black, alpha=0.2)
     return plt
@@ -71,12 +71,12 @@ end
 Draw 1D Minos profile over a range (requires matplotlib).
 """
 function Minuit2.draw_mnprofile(m::Minuit, var; band=true, text=true, kwargs...)
-    ix, xname = Minuit2.normalize_par(m, var)
-    x, y = mnprofile(m, ix; kwargs...)
+    ix, xname = Minuit2.keypair(m, var)
+    x, y, _ = mnprofile(m, ix; subtract_min=true, kwargs...)
     v = values(m)[ix]
     e = errors(m)[ix]
     title = text ? "$xname= $(round(v, digits=3)) - $(round(e, digits=3)) + $(round(e, digits=3))" : nothing
-    plt = plot(x, y; title=title, label=m.funcname, xlabel=xname)
+    plt = plot(x, y; title=title, label=m.funcname, xlabel=xname, ylabel="FCN")
     vline!(plt, [v]; label=nothing, color=:black)
     band && vspan!(plt, [v - e, v + e]; label=nothing, color=:black, alpha=0.2)
     return plt

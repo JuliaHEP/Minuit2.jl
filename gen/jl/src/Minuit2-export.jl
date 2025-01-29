@@ -7,8 +7,8 @@ export HasMadePosDefCovar, HasParameters, HasPosDefCovar, HasReachedCallLimit, H
 export HasValidParameters, HesseFailed, Hessian, HessianCentralFDMixedDerivatives, HessianForcePosDef, HessianG2Tolerance
 export HessianGradientNCycles, HessianNCycles, HessianStepTolerance, Index, Int2ext, IntCovariance, IntOfExt, IntParameters, IsAboveMaxEdm
 export IsConst, IsFixed, IsHigh, IsLow, IsMedium, IsValid, IsVeryHigh, JuliaFcn, Level, Loval, Lower, LowerLimit, LowerNewMin
-export LowerState, LowerValid, Min, Minimizer, Minos, MinuitParameters, NFcn, NIter, Name, Ncycles, NewMinimum, Nrow, NumOfCalls
-export Number, Parameter, Parameters, Params, Precision, ROOT!Minuit2!FCNBase, ROOT!Minuit2!FunctionGradient
+export LowerState, LowerValid, Min, Minimizer, Minos, MinuitParameters, NFcn, NIter, Name, Ncycles, NewMinimum, Nfcn, Ngrad, Nrow
+export NumOfCalls, Number, Parameter, Parameters, Params, Precision, ROOT!Minuit2!FCNBase, ROOT!Minuit2!FunctionGradient
 export ROOT!Minuit2!FunctionMinimum, ROOT!Minuit2!FunctionMinimum!MnAboveMaxEdm, ROOT!Minuit2!FunctionMinimum!MnReachedCallLimit
 export ROOT!Minuit2!FunctionMinimum!MnValid, ROOT!Minuit2!FunctionMinimum!Status, ROOT!Minuit2!GradientParameterSpace
 export ROOT!Minuit2!GradientParameterSpace!External, ROOT!Minuit2!GradientParameterSpace!Internal, ROOT!Minuit2!LASymMatrix, ROOT!Minuit2!LAVector
@@ -20,13 +20,13 @@ export ROOT!Minuit2!MnPrint!AddFilter, ROOT!Minuit2!MnPrint!ClearFilter, ROOT!Mi
 export ROOT!Minuit2!MnPrint!Oneline, ROOT!Minuit2!MnPrint!SetGlobalLevel, ROOT!Minuit2!MnPrint!SetMaxNP, ROOT!Minuit2!MnPrint!ShowPrefixStack
 export ROOT!Minuit2!MnPrint!Verbosity, ROOT!Minuit2!MnPrint!Verbosity!Debug, ROOT!Minuit2!MnPrint!Verbosity!Error, ROOT!Minuit2!MnPrint!Verbosity!Info
 export ROOT!Minuit2!MnPrint!Verbosity!Trace, ROOT!Minuit2!MnPrint!Verbosity!Warn, ROOT!Minuit2!MnPrint!eDebug, ROOT!Minuit2!MnPrint!eError
-export ROOT!Minuit2!MnPrint!eInfo, ROOT!Minuit2!MnPrint!eTrace, ROOT!Minuit2!MnPrint!eWarn, ROOT!Minuit2!MnStrategy, ROOT!Minuit2!MnUserCovariance
-export ROOT!Minuit2!MnUserParameterState, ROOT!Minuit2!MnUserParameters, ROOT!Minuit2!MnUserTransformation, ROOT!Minuit2!Mndaxpy, ROOT!Minuit2!Mndscal
-export ROOT!Minuit2!Mndspmv, ROOT!Minuit2!ModularFunctionMinimizer, ROOT!Minuit2!createFunctionMinimum
-export ROOT!Minuit2!createMnUserParameterState, Release, RemoveLimits, Scale, Seed, SetError, SetErrorDef, SetGradientNCycles, SetGradientStepTolerance
-export SetGradientTolerance, SetHessianCentralFDMixedDerivatives, SetHessianForcePosDef, SetHessianG2Tolerance, SetHessianGradientNCycles
-export SetHessianNCycles, SetHessianStepTolerance, SetHighStrategy, SetLevel, SetLimits, SetLowStrategy, SetLowerLimit, SetMediumStrategy
-export SetName, SetPrecision, SetStorageLevel, SetUpperLimit, SetValue, SetVeryHighStrategy, State, StorageLevel, Strategy
-export TolerG2, Tolerstp, Trafo, Up, Upper, UpperLimit, UpperNewMin, UpperState, UpperValid, Upval, UserCovariance
-export UserParameters, UserState, Value, VariableParameters, Vec, X, XYPoint, Y, add!, assign, gradParameterSpace, mult!, nfcn, nfcn!
-export paren, size, std!pair, sub!
+export ROOT!Minuit2!MnPrint!eInfo, ROOT!Minuit2!MnPrint!eTrace, ROOT!Minuit2!MnPrint!eWarn, ROOT!Minuit2!MnScan, ROOT!Minuit2!MnSimplex
+export ROOT!Minuit2!MnStrategy, ROOT!Minuit2!MnUserCovariance, ROOT!Minuit2!MnUserParameterState, ROOT!Minuit2!MnUserParameters
+export ROOT!Minuit2!MnUserTransformation, ROOT!Minuit2!Mndaxpy, ROOT!Minuit2!Mndscal, ROOT!Minuit2!Mndspmv, ROOT!Minuit2!ModularFunctionMinimizer
+export ROOT!Minuit2!createFunctionMinimum, ROOT!Minuit2!createMnUserParameterState, Release, RemoveLimits, Scale, Seed, SetError, SetErrorDef
+export SetGradientNCycles, SetGradientStepTolerance, SetGradientTolerance, SetHessianCentralFDMixedDerivatives, SetHessianForcePosDef
+export SetHessianG2Tolerance, SetHessianGradientNCycles, SetHessianNCycles, SetHessianStepTolerance, SetHighStrategy, SetLevel, SetLimits
+export SetLowStrategy, SetLowerLimit, SetMediumStrategy, SetName, SetPrecision, SetStorageLevel, SetUpperLimit, SetValue
+export SetVeryHighStrategy, State, StorageLevel, Strategy, TolerG2, Tolerstp, Trafo, Up, Upper, UpperLimit, UpperNewMin, UpperState
+export UpperValid, Upval, UserCovariance, UserParameters, UserState, Value, VariableParameters, Vec, X, XYPoint, Y, add!, assign
+export gradParameterSpace, mult!, paren, size, std!pair, sub!

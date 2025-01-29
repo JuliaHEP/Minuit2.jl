@@ -25,7 +25,7 @@ FunctionMinimum ROOT::Minuit2::createFunctionMinimum(const JuliaFcn& fcn, const 
   }
 
   MinimumParameters minp(val, err, seed.Fval());
-  std::vector<MinimumState> minstv(1, MinimumState(minp, seed.Edm(), fcn.nfcn));
+  std::vector<MinimumState> minstv(1, MinimumState(minp, seed.Edm(), fcn.Nfcn()));
   if (minstv.back().Edm() < edm_goal) return FunctionMinimum(seed, minstv, fcn.Up());
   return FunctionMinimum(seed, minstv, fcn.Up(), FunctionMinimum::MnAboveMaxEdm);
 }

@@ -18,6 +18,7 @@ module Minuit2
         @initcxx
     end
 
+    include("wrap.jl")
     include("api.jl")
 
     export draw_contour, draw_mncontour, draw_profile, draw_mnprofile
