@@ -290,6 +290,7 @@ function getproperty(e::MinosError, sym::Symbol)
         return getfield(e, sym)
     end
 end
+Base.show(io::IO, m::Dict{String, MinosError}) = show.(io, collect(values(m)))
 
 #---MnApplication-----------------------------------------------------------------------------------
 export MnApplication

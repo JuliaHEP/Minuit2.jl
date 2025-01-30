@@ -5,12 +5,14 @@ using Distributions
 
 import Base: values
 
-export FCN, Minuit, migrad!, hesse!, minos!, contour, mncontour, profile, mnprofile
-export values, fval, method, nfcn, niter, up, isvalid, isfixed, matrix, minos, errors, merrors, values, value
-export name, valid, lower, upper, symmetric
+export FCN, Minuit, migrad!, hesse!, matrix, minos!, contour, mncontour, profile, mnprofile
 
-abstract type OptimizationResults end
+"""
+    Minuit
 
+Minuit object to perform minimization. It keeps track of the function to minimize,
+the parameters, and the minimization results.
+"""
 mutable struct Minuit
     funcname::String                                # Name of the function
     fcn::JuliaFcn                                   # The function to minimize    
@@ -25,14 +27,11 @@ mutable struct Minuit
     last_state::MnUserParameterState                # The last user parameters
     app::Union{MnApplication, Nothing}              # The Minuit application
     fmin::Union{FunctionMinimum, Nothing}           # The result of the minimization
-    minos::Union{Dict{String, MinosError}, Nothing} # The Minos errors
+    mino::Union{Dict{String, MinosError}, Nothing} # The Minos errors
 end
 
 #---Minuit struct functions------------------------------------------------------------------------
 include("util.jl")
-
-
-Base.show(io::IO, m::Dict{String, MinosError}) = show.(io, collect(values(m)))
 
 """
     get_argument_names(f)
@@ -228,45 +227,6 @@ function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), meth
     Minuit(funcname, jf, x0, npar, names, method, tolerance, precision, strategy, userpars, userpars, nothing, nothing, nothing)
 end
 
-function Base.show(io::IO, m::Minuit)
-    if m.app === nothing
-        print(io, "Minuit(FCN = $(m.funcname), X0 = $(m.x0), Method = $(m.method))")
-        return
-    end
-    if !isnothing(m.fmin)
-        #---Print the minimization results-------------------------------------------------------------
-        min = m.fmin
-        data1 = ["FCN"        "Method"  "Ncalls" "Iterations" "up";
-                 m.fval       m.method  m.nfcn   m.niter  m.up;
-                 "Valid Min." "Valid Param."	      "Above EDM"  " "	                        "Reached call limit";
-                 m.is_valid	   HasValidParameters(min) IsAboveMaxEdm(min)	" "                 HasReachedCallLimit(min);
-                 "Hesse failed"	  "Has cov."	          "Accurate"	        "Pos. def."         "Forced";
-                 HesseFailed(min) HasValidCovariance(min) HasAccurateCovar(min)	HasPosDefCovar(min) HasMadePosDefCovar(min)]
-        pretty_table(io, data1; alignment=:l, show_header=false, body_hlines = [2,4])
-    end
-    if !isnothing(m.app)
-        #---Print the parameters
-        userpars = State(m.app)
-        npar     = m.npar
-        mnpars = [Parameter(m.app, i) for i in 0:npar-1]
-        header = ["Name", "Value", "Hesse Error",  "Minos-", "Minos+", "Limit-", "Limit+", "Fixed"]
-        names = m.names
-        values = [Value(userpars, i) for i in 0:npar-1]
-        errors = [Error(userpars, i) for i in 0 : npar-1]
-        if m.minos === nothing
-            minos_err_low = [ " " for i in 0:npar-1]
-            minos_err_high = [ " " for i in 0:npar-1]
-        else
-            minos_err_low = [ haskey(m.minos,names[i]) ? m.minos[names[i]].lower : " " for i in 1:npar]
-            minos_err_high = [ haskey(m.minos,names[i]) ? m.minos[names[i]].upper : " " for i in 1:npar]
-        end
-        limit_low = [ HasLowerLimit(mnpars[i]) ? LowerLimit(mnpars[i]) : " " for i in 1:npar]
-        limit_up = [ HasUpperLimit(mnpars[i]) ? UpperLimit(mnpars[i]) : " " for i in 1:npar]
-        fixed = [ IsFixed(mnpars[i]) ? true : " " for i in 1:npar]
-        pretty_table(io, [names values errors minos_err_low minos_err_high limit_low limit_up fixed]; header=header, alignment=:l)
-    end
-end
-
 """
     migrad!(m::Minuit, strategy=1)
 
@@ -291,7 +251,7 @@ function migrad!(m::Minuit, strategy=1)
     #---Update the Minuit object with the results---------------------------------------------------
     m.app = migrad
     m.fmin = min
-    m.minos = nothing
+    m.mino = nothing
     m.strategy = strategy
     m.last_state = UserState(min)[]
     return m
@@ -301,6 +261,25 @@ function edm_goal(m::Minuit; migrad_factor=false)
     edm_goal = max( m.tolerance * Up(m.fcn), 4 * sqrt(eps()))
     migrad_factor && (edm_goal *= 2e-3)
     edm_goal
+end
+
+"""
+    matrix(m::Minuit; correlation=false)
+
+Get the covariance matrix of the parameters.
+"""
+function matrix(m::Minuit; correlation=false)
+    state = State(m.app)
+    if HasCovariance(state)
+        cov = Covariance(state)
+        a = [cov(i, j) for i in 1:m.npar, j in 1:m.npar]
+        if correlation
+            d = diag(a) .^ 0.5
+            a ./= d .* d'
+        end
+        return a
+    end
+    return
 end
 
 """
@@ -399,7 +378,7 @@ function minos!(m::Minuit; cl=0.68, ncall=0, parameters=(), strategy=1)
         ipars = []
         for par in parameters
             ip, pname = keypair(m, par)
-            if isfixed(m, ip)
+            if m.fixed[ip]
                 warn("Cannot scan over fixed parameter $pname")
             else
                 push!(ipars, ip)
@@ -413,7 +392,7 @@ function minos!(m::Minuit; cl=0.68, ncall=0, parameters=(), strategy=1)
         mn = Minos(minos, ipar-1, ncall, m.tolerance)
         merrors[m.names[ipar]] = mn
     end
-    m.minos = merrors
+    m.mino = merrors
     m.strategy = strategy
     return m
 end
@@ -582,18 +561,18 @@ Minos profile computed by `mncontour`.
 function profile(m::Minuit, var; size=100, bound=2, grid=nothing, subtract_min=false)
 
     ipar, pname = keypair(m, var)
-    isfixed(m, ipar) && throw(ErrorException("Cannot profile over fixed parameter $pname"))
+    m.fixed[ipar] && throw(ErrorException("Cannot profile over fixed parameter $pname"))
     if !isnothing(grid)
         x = grid
         ndims(x) != 1 && throw(ArgumentError("grid must be 1D array-like"))
     else
-        start = values(m)[ipar]
-        sigma= errors(m)[ipar]
+        start = m.values[ipar]
+        sigma= m.errors[ipar]
         x = range(start - bound * sigma, start + bound * sigma, length=size)
     end
 
     y = zeros(Float64, length(x))
-    values_v = StdVector(values(m))
+    values_v = StdVector(m.values |> collect)
     for i in eachindex(x)
         values_v[ipar] = x[i]
         y[i] = m.fcn(values_v)
@@ -650,8 +629,8 @@ function mnprofile(m::Minuit, var; size=30, bound=2, grid=nothing, subtract_min=
         if bound isa Tuple
             xrange= bound
         else
-            start = values(m)[ipar]
-            sigma= errors(m)[ipar]
+            start = m.values[ipar]
+            sigma = m.errors[ipar]
             xrange = start - bound * sigma, start + bound * sigma
         end
         x = range(xrange..., length=size)
@@ -700,42 +679,3 @@ function robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision,
     end
     return fmin
 end
-
-#=
-def _robust_low_level_fit(
-    fcn: FCN,
-    state: MnUserParameterState,
-    ncall: int,
-    strategy: MnStrategy,
-    tolerance: float,
-    precision: Optional[float],
-    iterate: int,
-    use_simplex: bool,
-) -> FunctionMinimum:
-    # Automatically call Migrad up to `iterate` times if minimum is not valid.
-    # This simple heuristic makes Migrad converge more often. Optionally,
-    # one can interleave calls to Simplex and Migrad, which may also help.
-    migrad = MnMigrad(fcn, state, strategy)
-    if precision is not None:
-        migrad.precision = precision
-    fm = migrad(ncall, tolerance)
-    strategy = MnStrategy(2)
-    migrad = MnMigrad(fcn, fm.state, strategy)
-    while not fm.is_valid and not fm.has_reached_call_limit and iterate > 1:
-        # If we have to iterate, we have a pathological case. Increasing the
-        # strategy to 2 in this case was found to be beneficial.
-        if use_simplex:
-            simplex = MnSimplex(fcn, fm.state, strategy)
-            if precision is not None:
-                simplex.precision = precision
-            fm = simplex(ncall, tolerance)
-            # recreate MnMigrad instance to start from updated state
-            migrad = MnMigrad(fcn, fm.state, strategy)
-        # workaround: precision must be set again after each call
-        if precision is not None:
-            migrad.precision = precision
-        fm = migrad(ncall, tolerance)
-        iterate -= 1
-    return fm
-
-=#

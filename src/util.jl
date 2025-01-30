@@ -1,4 +1,4 @@
-import Base: getindex, setindex!, getproperty, length, iterate, show, isapprox
+import Base: getindex, setindex!, getproperty, length, iterate, show, isapprox, eltype, show
 
 function keypair(m::Minuit, key::Union{Int, String})
     if key isa Int
@@ -31,10 +31,12 @@ isapprox(view::AbstractView, v::Vector; kwargs...) = isapprox(collect(view), v; 
 struct ValueView <: AbstractView;  minuit::Minuit; end
 _get(view::ValueView, ipar::Int) = Value(view.minuit.last_state, ipar-1)
 _set(view::ValueView, ipar::Int, value) = SetValue(view.minuit.last_state, ipar, value)
+eltype(::ValueView) = Float64
 
 struct ErrorView <: AbstractView;  minuit::Minuit; end
 _get(view::ErrorView, ipar::Int) = Error(view.minuit.last_state, ipar-1)
 _set(view::ErrorView, ipar::Int, value) = SetError(view.minuit.last_state, ipar, value)
+eltype(::ErrorView) = Float64
 
 struct FixedView <: AbstractView;  minuit::Minuit; end
 _get(view::FixedView, ipar::Int) = IsFixed(view.minuit.last_state[ipar])
@@ -45,13 +47,14 @@ function _set(view::FixedView, ipar::Int, value::Bool)
         Release(view.minuit.last_state, ipar-1)
     end
 end
+eltype(::FixedView) = Bool
 
 struct LimitView <: AbstractView;  minuit::Minuit; end
 function _get(view::LimitView, ipar::Int)
     p = view.minuit.last_state[ipar]
     upper = HasUpperLimit(p) ? UpperLimit(p) : Inf
     lower = HasLowerLimit(p) ? LowerLimit(p) : -Inf
-    return (upper, lower)
+    return (lower, upper)
 end
 function _set(view::LimitView, ipar::Int, value)
     lower, upper = value
@@ -77,8 +80,19 @@ function _set(view::LimitView, ipar::Int, value)
     val > upper && (val = upper)
     SetValue(state, ipar, val)
     SetError(state, ipar, err)
-    return (upper, lower)
+    return (lower, upper)
 end
+eltype(::LimitView) = Tuple{Float64, Float64}
+
+struct MinosView <: AbstractView;  minuit::Minuit; end
+function _get(view::MinosView, ipar::Int)
+    _, key = keypair(view.minuit, ipar)
+    get(view.minuit.mino, key, nothing)
+end
+function _set(::MinosView, ::Int, value)
+    throw(ArgumentError("Cannot set Minos results"))
+end
+eltype(::MinosView) = Union{MinosError, Nothing}
 
 #---Minuit property accessors-----------------------------------------------------------------------
 function getproperty(m::Minuit, name::Symbol)
@@ -102,21 +116,66 @@ function getproperty(m::Minuit, name::Symbol)
         return Up(m.fmin)
     elseif name == :is_valid
         return IsValid(m.fmin)
+    elseif name == :is_above_max_edm
+        return IsAboveMaxEdm(m.fmin)
+    elseif name == :has_parameters_at_limit
+        return HasParametersAtLimit(m.fmin)
+    elseif name == :has_accurate_covar
+        return HasAccurateCovar(m.fmin)
+    elseif name == :has_posdef_covar
+        return HasPosDefCovar(m.fmin)
+    elseif name == :has_made_posdef_covar
+        return HasMadePosDefCovar(m.fmin)
+    elseif name == :hesse_failed
+        return HesseFailed(m.fmin)
+    elseif name == :has_covariance
+        return HasCovariance(m.fmin)
+    elseif name == :has_accurate_covar
+        return HasAccurateCovar(m.fmin)
+    elseif name == :has_valid_parameters
+        return HasValidParameters(m.fmin)
+    elseif name == :has_reached_call_limit
+        return HasReachedCallLimit(m.fmin)
+    elseif name == :minos
+        return MinosView(m)
     else
         return getfield(m, name)
     end
 end
 
-function matrix(m::Minuit; correlation=false)
-    state = State(m.app)
-    if HasCovariance(state)
-        cov = Covariance(state)
-        a = [cov(i, j) for i in 1:m.npar, j in 1:m.npar]
-        if correlation
-            d = diag(a) .^ 0.5
-            a ./= d .* d'
-        end
-        return a
+
+function Base.show(io::IO, m::Minuit)
+    if m.app === nothing
+        print(io, "Minuit(FCN = $(m.funcname), X0 = $(m.x0), Method = $(m.method))")
+        return
     end
-    return
+    if !isnothing(m.fmin)
+        #---Print the minimization results-------------------------------------------------------------
+        data1 = ["FCN"        "Method"     "Ncalls"   "Iterations" "Up";
+                 m.fval       m.method      m.nfcn     m.niter     m.up;
+                 "Valid Min."     "Valid Param."	      "Above EDM"           "Call limit"              "Edm";
+                 m.is_valid	      m.has_valid_parameters  m.is_above_max_edm	m.has_reached_call_limit  m.edm;
+                 "Hesse failed"	  "Has cov."	          "Accurate"	        "Pos. def."               "Forced";
+                 m.hesse_failed   m.has_covariance        m.has_accurate_covar	m.has_posdef_covar        m.has_made_posdef_covar]
+        pretty_table(io, data1; alignment=:l, show_header=false, body_hlines = [2,4])
+    end
+    if !isnothing(m.app)
+        #---Print the parameters
+        npar     = m.npar
+        header = ["Name", "Value", "Hesse Error",  "Minos-", "Minos+", "Limit-", "Limit+", "Fixed"]
+        names = m.names
+        values = m.values |> collect
+        errors = m.errors |> collect
+        if m.mino === nothing
+            minos_err_low = [ " " for i in 1:npar]
+            minos_err_high = [ " " for i in 1:npar]
+        else
+            minos_err_low =  [ isnothing(m.minos[i]) ? " " : m.minos[i].lower for i in 1:npar]
+            minos_err_high = [ isnothing(m.minos[i]) ? " " : m.minos[i].upper for i in 1:npar]
+        end
+        limit_low = [m.limits[i][1] == -Inf ?  " " : m.limits[i][1] for i in 1:npar]
+        limit_up  = [m.limits[i][2] ==  Inf ?  " " : m.limits[i][2] for i in 1:npar]
+        fixed = [ m.fixed[i] ? true : " " for i in 1:npar]
+        pretty_table(io, [names values errors minos_err_low minos_err_high limit_low limit_up fixed]; header=header, alignment=:l)
+    end
 end

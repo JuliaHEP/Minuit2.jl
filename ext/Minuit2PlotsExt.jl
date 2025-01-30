@@ -15,7 +15,7 @@ function Minuit2.draw_contour(m::Minuit, x, y; bound=4, subtract_min=false, kwar
     iy, yname = Minuit2.keypair(m, y)
 
     xv, yv, zv = Minuit2.contour(m, ix, iy, bound=bound, subtract_min=subtract_min)
-    vx, vy = values(m)[ix], Minuit2.values(m)[iy]
+    vx, vy = m.values[ix], m.values[iy]
     Plots.heatmap(xv, yv, zv', title="Contour $(m.funcname) for $(xname) vs $(yname)", xlabel=xname, ylabel=yname, kwargs...)
     Plots.scatter!([vx], [vy], label="Min", color=:white)
 end
@@ -56,8 +56,8 @@ Draw 1D cost function profile over a range (requires matplotlib).
 function Minuit2.draw_profile(m::Minuit, var; band=true, text=true, kwargs...)
     ix, xname = Minuit2.keypair(m, var)
     x, y = profile(m, ix; subtract_min=true, kwargs...)
-    v = values(m)[ix]
-    e = errors(m)[ix]
+    v = m.values[ix]
+    e = m.errors[ix]
     title = text ? "$xname= $(round(v, digits=3)) - $(round(e, digits=3)) + $(round(e, digits=3))" : nothing
     plt = plot(x, y; title=title, label=m.funcname, xlabel=xname, ylabel="FCN")
     vline!(plt, [v]; label=nothing, color=:black)
@@ -73,8 +73,8 @@ Draw 1D Minos profile over a range (requires matplotlib).
 function Minuit2.draw_mnprofile(m::Minuit, var; band=true, text=true, kwargs...)
     ix, xname = Minuit2.keypair(m, var)
     x, y, _ = mnprofile(m, ix; subtract_min=true, kwargs...)
-    v = values(m)[ix]
-    e = errors(m)[ix]
+    v = m.values[ix]
+    e = m.errors[ix]
     title = text ? "$xname= $(round(v, digits=3)) - $(round(e, digits=3)) + $(round(e, digits=3))" : nothing
     plt = plot(x, y; title=title, label=m.funcname, xlabel=xname, ylabel="FCN")
     vline!(plt, [v]; label=nothing, color=:black)
