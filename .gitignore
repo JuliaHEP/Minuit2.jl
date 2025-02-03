@@ -1,1 +1,7 @@
-/Manifest.toml
+.vscode/*
+.browse.VC.*
+.DS_Store
+Manifest.toml
+*/Manifest.toml
+gen/build
+docs/build

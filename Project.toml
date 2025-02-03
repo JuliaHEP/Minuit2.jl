@@ -1,17 +1,30 @@
 name = "Minuit2"
 uuid = "37821647-3276-4ed8-9a4e-bc9886b3c106"
-authors = ["Jan Strube <jan.strube@gmail.com>"]
-version = "0.1.0"
+authors = ["Jan Strube <jan.strube@gmail.com>", "Pere Mato <pere.mato@cern.ch>"]
+version = "0.2.0"
 
 [deps]
 CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Minuit2_Julia_Wrapper_jll = "65cff058-67fb-5034-9600-a8f6a0feb90b"
-Minuit2_jll = "683d4edd-6ccf-5a74-985b-ebee5a2d6cb7"
+PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+
+[weakdeps]
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+
+[extensions]
+Minuit2PlotsExt = "Plots"
 
 [compat]
-CxxWrap = "0.11"
-julia = "1.5"
+CxxWrap = "0.16"
+Distributions = "0.25.117"
+LinearAlgebra = "1.11.0"
+Minuit2_Julia_Wrapper_jll = "0.2.0"
+Plots = "1.40.9"
+PrettyTables = "2.4.0"
+julia = "1.9"
 
 [extras]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
