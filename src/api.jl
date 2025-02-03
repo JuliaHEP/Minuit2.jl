@@ -33,27 +33,6 @@ end
 #---Minuit struct functions------------------------------------------------------------------------
 include("util.jl")
 
-"""
-    get_argument_names(f)
-
-Return the names of the arguments of the function `f`.
-"""
-function get_argument_names(f)
-    m = first(methods(f))
-    tv, decls, file, line = Base.arg_decl_parts(m)
-    [d[1] for d in decls[2:end]]
-end
-
-"""
-    get_nargs(f)
-
-Return the number of arguments of the function `f`.
-"""
-function get_nargs(f)
-    m = first(methods(f))
-    length(m.sig.parameters)-1
-end
-
 const callbacks = CxxWrap.SafeCFunction[]
 """
     FCN(fnc, grad=nothing, arraycall=false, errordef=1.0)
@@ -653,9 +632,6 @@ function mnprofile(m::Minuit, var; size=30, bound=2, grid=nothing, subtract_min=
     return x, y, status
 end
 
-"""
-    robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision, iterate, use_simplex)
-"""
 function robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision, iterate, use_simplex)
     migrad = MnMigrad(fcn, state, strategy)
     isnothing(precision) || SetPrecision(migrad, precision)

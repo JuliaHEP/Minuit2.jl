@@ -2,9 +2,9 @@
 
 ## Description
 
-Julia bindings for the [**Minuit2**](https://seal.web.cern.ch/seal/snapshot/work-packages/mathlibs/minuit) minimization package. It provides a Julia-friendly interface to the C++ library, maintained by CERN's [ROOT team](https://root.cern.ch). Minuit2 is designed for function minimization, particularly in statistical applications such as maximum-likelihood estimation and least-squares fitting. It computes best-fit parameters and error estimates using likelihood profile analysis
+Julia bindings for the [**Minuit2**](https://root.cern/root/htmldoc/guides/minuit2/Minuit2.html) minimization package. It provides a Julia-friendly interface to the C++ library, maintained by CERN's [ROOT team](https://root.cern.ch). Minuit2 is designed for function minimization, particularly in statistical applications such as maximum-likelihood estimation and least-squares fitting. It computes best-fit parameters and error estimates using likelihood profile analysis
 
-The API and additional features of this package are heavily inspired by [iminuit](https://github.com/scikit-hep/iminuit), which offers a Python-friendly interface to the same library.
+The API and additional features of this package are heavily inspired by [iminuit](https://scikit-hep.org/iminuit/), which offers a Python-friendly interface to the same library.
 
 ## Installation
 The Minuit2.jl package does no require any special installation. Stable releases are registered into the Julia general registry, and therefore can be deployed with the standard `Pkg` Julia package manager.

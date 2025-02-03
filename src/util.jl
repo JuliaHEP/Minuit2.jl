@@ -1,6 +1,6 @@
-import Base: getindex, setindex!, getproperty, length, iterate, show, isapprox, eltype, show
+import Base: getindex, setindex!, getproperty, length, lastindex, iterate, show, isapprox, eltype, show, ==
 
-function keypair(m::Minuit, key::Union{Int, String})
+function keypair(m::Minuit, key::Union{Int, String})1
     if key isa Int
         1 <= key <= m.npar || throw(ArgumentError("Parameter index out of range"))
         return key, m.names[key]
@@ -18,24 +18,32 @@ function getindex(view::AbstractView, key)
     _get(view, ipar)
 end
 function setindex!(view::AbstractView, value, key)
+    if key isa UnitRange{Int64}
+        for (i, k) in enumerate(key)
+            _set(view, k, value[i])
+        end
+        return
+    end
     ipar, _ = keypair(view.minuit, key)
     _set(view, ipar, value)
 end
 length(view::AbstractView) = view.minuit.npar
+lastindex(view::AbstractView) = view.minuit.npar
 iterate(view::AbstractView, state=1) = state > length(view) ? nothing : (view[state], state + 1)
 show(io::IO, view::AbstractView) = show(io, collect(view))
 isapprox(view::AbstractView, v::Vector; kwargs...) = isapprox(collect(view), v; kwargs...)
+==(view::AbstractView, v::Vector) = collect(view) == v
 
 #---Concrete views---------------------------------------------------------------------------------
 
 struct ValueView <: AbstractView;  minuit::Minuit; end
 _get(view::ValueView, ipar::Int) = Value(view.minuit.last_state, ipar-1)
-_set(view::ValueView, ipar::Int, value) = SetValue(view.minuit.last_state, ipar, value)
+_set(view::ValueView, ipar::Int, value) = SetValue(view.minuit.last_state, ipar-1, value)
 eltype(::ValueView) = Float64
 
 struct ErrorView <: AbstractView;  minuit::Minuit; end
 _get(view::ErrorView, ipar::Int) = Error(view.minuit.last_state, ipar-1)
-_set(view::ErrorView, ipar::Int, value) = SetError(view.minuit.last_state, ipar, value)
+_set(view::ErrorView, ipar::Int, value) = SetError(view.minuit.last_state, ipar-1, value)
 eltype(::ErrorView) = Float64
 
 struct FixedView <: AbstractView;  minuit::Minuit; end
@@ -178,4 +186,15 @@ function Base.show(io::IO, m::Minuit)
         fixed = [ m.fixed[i] ? true : " " for i in 1:npar]
         pretty_table(io, [names values errors minos_err_low minos_err_high limit_low limit_up fixed]; header=header, alignment=:l)
     end
+end
+
+function get_argument_names(f)
+    m = first(methods(f))
+    tv, decls, file, line = Base.arg_decl_parts(m)
+    [d[1] for d in decls[2:end]]
+end
+
+function get_nargs(f)
+    m = first(methods(f))
+    length(m.sig.parameters)-1
 end
