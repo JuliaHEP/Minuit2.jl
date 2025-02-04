@@ -75,12 +75,46 @@
         @test v[2] == (0.0, 2.0)
         @test v[3] == (0.0, 3.0)
 
+        @test v["x"] == (0.0, 1.0)
+        @test v["y"] == (0.0, 2.0)
+        @test v["z"] == (0.0, 3.0)
+
         v[2] = (-1.0, 1.0)
         @test v[2] == (-1.0, 1.0)
+        
+        v[1] = (-1.0, Inf)
+        @test v[1] == (-1.0, Inf)
 
-        @test v["x"] == (0.0, 1.0)
-        @test v["y"] == (-1.0, 1.0)
-        @test v["z"] == (0.0, 3.0)
+        v["z"] = (-Inf, 3.0)
+        @test v[3] == (-Inf, 3.0)
+
+        @test_throws BoundsError v[4] = (0.0, 1.0)
+        @test_throws BoundsError v["w"] = (0.0, 1.0)
+        @test_throws ArgumentError v[1] = (2.0, 1.0)
+
+        @test m.fixed[1] == false
+        v[1] = (1.0, 1.0)         # This is a valid limit
+        @test v[1] == (-Inf, Inf) # The limit is removed
+        @test m.fixed[1] == true
+        @test m.values[1] == 1.0
+
+    end
+
+    @testset "MinosView" begin
+        m = Minuit(sphere, [1,1,1], names=("x","y","z")) # Fake Minuit object
+        v = Minuit2.MinosView(m)                # MinosView object
+        @test v == [nothing, nothing, nothing]  # The default is no Minos results
+        migrad!(m)
+        minos!(m, parameters=["x", "z"])
+        @test v["x"].lower ≈ -1.0 atol=1e-2
+        @test v["x"].upper ≈ 1.0 atol=1e-2
+        @test v["z"].lower ≈ -1.0 atol=1e-2
+        @test v["z"].upper ≈ 1.0 atol=1e-2
+        @test v["y"] === nothing
+        @test_throws ArgumentError v["x"] = (0.0, 1.0)  # Cannot set the Minos result
+        @test v[1].is_valid == true
+        @test v[3].is_valid == true
+        @test v[2] === nothing
 
     end
 end

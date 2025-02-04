@@ -2,11 +2,11 @@ import Base: getindex, setindex!, getproperty, length, lastindex, iterate, show,
 
 function keypair(m::Minuit, key::Union{Int, String})1
     if key isa Int
-        1 <= key <= m.npar || throw(ArgumentError("Parameter index out of range"))
+        1 <= key <= m.npar || throw(BoundsError("Parameter index out of range"))
         return key, m.names[key]
     else
         ikey = findfirst(isequal(key), m.names)
-        ikey === nothing && throw(ArgumentError("Parameter $key not found"))
+        ikey === nothing && throw(BoundsError("Parameter $key not found"))
         return ikey, key
     end
 end
@@ -95,6 +95,7 @@ eltype(::LimitView) = Tuple{Float64, Float64}
 struct MinosView <: AbstractView;  minuit::Minuit; end
 function _get(view::MinosView, ipar::Int)
     _, key = keypair(view.minuit, ipar)
+    view.minuit.mino === nothing && return nothing
     get(view.minuit.mino, key, nothing)
 end
 function _set(::MinosView, ::Int, value)
@@ -112,6 +113,10 @@ function getproperty(m::Minuit, name::Symbol)
         return FixedView(m)
     elseif name == :limits
         return LimitView(m)
+    elseif name == :fmin
+        fmin = getfield(m, :fmin)
+        fmin === nothing && throw(ArgumentError("Minimization results not available"))
+        return fmin
     elseif name == :fval
         return Fval(m.fmin)
     elseif name == :edm
@@ -122,6 +127,8 @@ function getproperty(m::Minuit, name::Symbol)
         return NIter(m.fmin)
     elseif name == :up
         return Up(m.fmin)
+    elseif name == :errordef
+        return ErrorDef(m.fcn)
     elseif name == :is_valid
         return IsValid(m.fmin)
     elseif name == :is_above_max_edm
