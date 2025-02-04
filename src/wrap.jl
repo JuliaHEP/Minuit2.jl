@@ -181,14 +181,33 @@ function getproperty(f::JuliaFcn, sym::Symbol)
         return Nfcn(f)
     elseif sym == :ngrad
         return Ngrad(f)
+    elseif sym == :has_gradient
+        return HasGradient(f)
+    elseif sym == :up
+        return Up(f)
+    elseif sym == :errordef
+        return Up(f)
+    elseif sym == :grad
+        return (x...) -> Gradient(f,StdVector(collect(x)))
+    elseif sym == :vgrad
+        return (v) -> Gradient(f, v)
     else
         return getfield(f, sym)
     end
 end
 
-function (f::JuliaFcn)(x)
-    paren(f, x)
+function setproperty!(f::JuliaFcn, sym::Symbol, value)
+    if sym == :errordef
+        SetErrorDef(f, value)
+    else
+        setfield!(f, sym, value)
+    end
 end
+
+(f::JuliaFcn)(x::StdVector{Float64}) = paren(f, x)
+(f::JuliaFcn)(x::Vector{Float64}) = paren(f, StdVector(x))
+(f::JuliaFcn)(x::Float64...) = paren(f, StdVector(collect(x)))
+
 
 #---MnMigrad----------------------------------------------------------------------------------------
 export MnMigrad
@@ -230,8 +249,6 @@ function getproperty(f::FunctionMinimum, sym::Symbol)
         return Fval(f)
     elseif sym == :edm
         return Edm(f)
-    elseif sym == :nfcn
-        return Nfcn(f)
     elseif sym == :is_valid
         return IsValid(f)
     else
