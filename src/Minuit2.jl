@@ -18,12 +18,14 @@ module Minuit2
     end
 
     include("wrap.jl")
+    include("cost.jl")
     include("api.jl")
 
-    export draw_contour, draw_mncontour, draw_profile, draw_mnprofile
+    export draw_contour, draw_mncontour, draw_profile, draw_mnprofile, visualize
     function draw_contour end
     function draw_mncontour end
     function draw_profile end
     function draw_mnprofile end
+    function visualize end
 end
 

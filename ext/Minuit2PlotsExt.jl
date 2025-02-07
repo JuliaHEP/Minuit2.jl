@@ -82,4 +82,19 @@ function Minuit2.draw_mnprofile(m::Minuit, var; band=true, text=true, kwargs...)
     return plt
 end
 
+function Minuit2.visualize(m::Minuit; kwargs...)
+    if !isnothing(m.cost)
+        x = m.cost.x
+        y = m.cost.y
+        yerr = m.cost.yerror
+        plt = plot(x, y, yerr=yerr, seriestype=:scatter, kwargs...)
+        if m.is_valid
+            pars = m.values
+            yt = m.cost.model.(x, pars...)
+            plt = plot!(plt, x, yt; label="Fit")
+        end
+        return plt
+    end
+    throw(ArgumentError("Minuit object does not have a cost function"))
+end
 end
