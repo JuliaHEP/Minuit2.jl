@@ -149,7 +149,7 @@ end
 
 
 """
-    Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0, strategy=1,  kwargs...)
+    Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0, strategy=1,  kwargs...)
 
 Initialize a Minuit object.
 
@@ -236,7 +236,7 @@ Setting the values with keywords is not possible in this case. Minuit
 deduces the number of parameters from the length of the initialization
 sequence.
 """
-function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, 
+function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, 
                 tolerance=0.1, precision=nothing, strategy=1, kwargs...)
     if fcn isa CostFunction
         cost = fcn
@@ -265,6 +265,8 @@ function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), meth
     # If x0 is not provided, use the keyword arguments of the form <par>=<value>-------------------
     if x0 === ()
         x0 = [kwargs[Symbol(n)] for n in names]
+    else
+        x0 = collect(x0)
     end
     #---Create the user parameters-----------------------------------------------------------------
     userpars = MnUserParameterState()

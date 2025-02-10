@@ -112,9 +112,21 @@ mutable struct LeastSquares <: CostFunction
     ndim::Int
 end
 
-function LeastSquares(x::AbstractVector{Float64}, y::AbstractVector{Float64}, yerror::AbstractVector{Float64}, model::Function; 
+function LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Function; 
                      loss=nothing, verbose=0, model_grad=nothing, names=())
-    ndim = Base.size(x, 2)
+    #---Check in x is a vector of tuples-----------------------------------------------------------
+    if ndims(x) == 1 && eltype(x) <: Tuple
+        x = reduce(vcat, [[t...]' for t in x])
+    end
+    #---Check input arguments dimensions-----------------------------------------------------------
+    len, ndim = Base.size(x, 1), Base.size(x, 2)
+    length(y) == len || throw(DimensionMismatch("length of x and y do not match"))
+    if length(yerror) == 1
+        yerror = fill(yerror, len)
+    else
+        length(yerror) == len || throw(DimensionMismatch("length of x and yerror do not match"))
+    end
+
     data = hcat(x, y, yerror)
     loss = loss === nothing ? chi2 : loss
     params = model_parameters(model, names)
@@ -155,14 +167,18 @@ end
 function value(cost::LeastSquares, args)
     x  = @view cost.data[:,1:cost.ndim]
     y  = @view cost.data[:,cost.ndim+1]
-    ye = @view cost.data[:, cost.ndim+2]
-    ym = cost.model.(x, args...)
+    ye = @view cost.data[:,cost.ndim+2]
+    if cost.ndim == 1
+        ym = cost.model.(x, args...)
+    else
+        ym = [cost.model(x[i,:], args...) for i in 1:length(y)] 
+    end
    return cost.cost(y, ye, ym)
 end
 function grad(cost::LeastSquares, args)
     x  = @view cost.data[:,1:cost.ndim]
     y  = @view cost.data[:,cost.ndim+1]
-    ye = @view cost.data[:, cost.ndim+2]
+    ye = @view cost.data[:,cost.ndim+2]
     ym  = cost.model.(x, args...) |> vec
     ymg = cost.model_grad.(x, args...)
     return cost.cost_grad(y, ye, ym, ymg)

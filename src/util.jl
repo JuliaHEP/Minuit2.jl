@@ -220,6 +220,8 @@ function getproperty(m::Minuit, name::Symbol)
         return HesseFailed(m.fmin)
     elseif name == :has_covariance
         return HasCovariance(m.fmin)
+    elseif name == :covariance
+        return UserCovariance(m.fmin)[]
     elseif name == :has_accurate_covar
         return HasAccurateCovar(m.fmin)
     elseif name == :has_valid_parameters
@@ -253,6 +255,12 @@ function Base.show(io::IO, m::Minuit)
             show(io, m.fmin)
         end
         show(io, m.parameters)
+        if m.has_covariance
+            cov = [m.covariance(i, j) for i in 1:m.npar, j in 1:m.npar]
+            header = [" ", m.names...]
+            data = hcat(m.names, cov)
+            pretty_table(io, data; header=header, alignment=:l, show_header=true)
+        end
     end
 end
 
