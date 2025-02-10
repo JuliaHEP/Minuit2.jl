@@ -104,6 +104,7 @@ ndata(cost::Constant) = 0
 mutable struct LeastSquares <: CostFunction
     base::BaseCost
     data::Array{Float64, 2}
+    mask::Union{Vector{Bool}, BitVector, Nothing}
     loss::Function
     cost::Function
     cost_grad::Union{Function, Nothing}
@@ -113,7 +114,7 @@ mutable struct LeastSquares <: CostFunction
 end
 
 function LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Function; 
-                     loss=nothing, verbose=0, model_grad=nothing, names=())
+                     loss=nothing, verbose=0, model_grad=nothing, names=(), mask=nothing)
     #---Check in x is a vector of tuples-----------------------------------------------------------
     if ndims(x) == 1 && eltype(x) <: Tuple
         x = reduce(vcat, [[t...]' for t in x])
@@ -126,11 +127,11 @@ function LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Functi
     else
         length(yerror) == len || throw(DimensionMismatch("length of x and yerror do not match"))
     end
-
+    isnothing(mask) || length(mask) == len || throw(DimensionMismatch("length of x and mask do not match"))
     data = hcat(x, y, yerror)
     loss = loss === nothing ? chi2 : loss
     params = model_parameters(model, names)
-    return LeastSquares(BaseCost(verbose, params), data, loss, chi2, chi2_grad, model, model_grad, ndim)
+    return LeastSquares(BaseCost(verbose, params), data, mask, loss, chi2, chi2_grad, model, model_grad, ndim)
 end
 
 function getproperty(cost::LeastSquares, sym::Symbol)
@@ -165,9 +166,9 @@ function setproperty!(cost::LeastSquares, sym::Symbol, value)
 end
 
 function value(cost::LeastSquares, args)
-    x  = @view cost.data[:,1:cost.ndim]
-    y  = @view cost.data[:,cost.ndim+1]
-    ye = @view cost.data[:,cost.ndim+2]
+    x = isnothing(cost.mask) ? cost.x : cost.x[cost.mask]
+    y = isnothing(cost.mask) ? cost.y : cost.y[cost.mask]
+    ye = isnothing(cost.mask) ? cost.yerror : cost.yerror[cost.mask]
     if cost.ndim == 1
         ym = cost.model.(x, args...)
     else
@@ -176,11 +177,16 @@ function value(cost::LeastSquares, args)
    return cost.cost(y, ye, ym)
 end
 function grad(cost::LeastSquares, args)
-    x  = @view cost.data[:,1:cost.ndim]
-    y  = @view cost.data[:,cost.ndim+1]
-    ye = @view cost.data[:,cost.ndim+2]
-    ym  = cost.model.(x, args...) |> vec
-    ymg = cost.model_grad.(x, args...)
+    x = isnothing(cost.mask) ? cost.x : cost.x[cost.mask]
+    y = isnothing(cost.mask) ? cost.y : cost.y[cost.mask]
+    ye = isnothing(cost.mask) ? cost.yerror : cost.yerror[cost.mask]
+    if cost.ndim == 1
+        ym = cost.model.(x, args...)
+        ymg = cost.model_grad.(x, args...)
+    else
+        ym = [cost.model(x[i,:], args...) for i in 1:length(y)] 
+        ymg = [cost.model_grad(x[i,:], args...) for i in 1:length(y)] 
+    end
     return cost.cost_grad(y, ye, ym, ymg)
 end
 has_grad(cost::LeastSquares) = cost.cost_grad !== nothing && cost.model_grad !== nothing
