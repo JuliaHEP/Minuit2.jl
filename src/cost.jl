@@ -43,7 +43,7 @@ deviations.
 - Value of cost function.
 """
 chi2(y, ye, ym) = sum(z_squared(y, ye, ym))
-
+soft_l1_cost(y, ye, ym) = 2 * sum(sqrt.(1 .+ z_squared(y, ye, ym)) .- 1)
 
 """
 Compute gradient of :func:`chi2`.
@@ -65,7 +65,11 @@ Compute gradient of :func:`chi2`.
         Gradient of cost function with respect to model parameters.
     """
 chi2_grad(y, ye, ym, gym) = -2 * sum((y .- ym) .* gym .* ye.^-2)
-
+function soft_l1_cost_grad(y, ye, ym, gym)
+    z = (y .- ym) ./ ye
+    f = (1 .+ z.^2).^-0.5
+    return -2 * sum(z ./ ye .* f .* gym)
+end
 
 function model_parameters(model, names)
     # strip first argument from model
@@ -105,7 +109,7 @@ mutable struct LeastSquares <: CostFunction
     base::BaseCost
     data::Array{Float64, 2}
     mask::Union{Vector{Bool}, BitVector, Nothing}
-    loss::Function
+    loss::Union{Function, Symbol}
     cost::Function
     cost_grad::Union{Function, Nothing}
     model::Function
@@ -114,7 +118,7 @@ mutable struct LeastSquares <: CostFunction
 end
 
 function LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Function; 
-                     loss=nothing, verbose=0, model_grad=nothing, names=(), mask=nothing)
+                     loss=:linear, verbose=0, model_grad=nothing, names=(), mask=nothing)
     #---Check in x is a vector of tuples-----------------------------------------------------------
     if ndims(x) == 1 && eltype(x) <: Tuple
         x = reduce(vcat, [[t...]' for t in x])
@@ -129,9 +133,10 @@ function LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Functi
     end
     isnothing(mask) || length(mask) == len || throw(DimensionMismatch("length of x and mask do not match"))
     data = hcat(x, y, yerror)
-    loss = loss === nothing ? chi2 : loss
     params = model_parameters(model, names)
-    return LeastSquares(BaseCost(verbose, params), data, mask, loss, chi2, chi2_grad, model, model_grad, ndim)
+    c =  LeastSquares(BaseCost(verbose, params), data, mask, loss, chi2, chi2_grad, model, model_grad, ndim)
+    c.loss = loss
+    return c
 end
 
 function getproperty(cost::LeastSquares, sym::Symbol)
@@ -160,6 +165,24 @@ function setproperty!(cost::LeastSquares, sym::Symbol, value)
         cost.data[:,cost.ndim+1] = value
     elseif sym == :yerror
         cost.data[:,cost.ndim+2] = value
+    elseif sym == :loss
+        setfield!(cost, sym, value)
+        if value isa Symbol
+            if value == :linear
+                cost.cost = chi2
+                cost.cost_grad = chi2_grad
+            elseif value == :soft_l1
+                cost.cost = soft_l1_cost
+                cost.cost_grad = soft_l1_cost_grad
+            else
+                throw(ArgumentError("Unknown loss $value"))
+            end
+        elseif value isa Function
+            cost.cost = (y, ye, ym) -> sum(value(z_squared(y, ye, ym)))
+            cost.cost_grad = nothing
+        else
+            throw(ArgumentError("loss must be Symbol or Function"))
+        end
     else
         return setfield!(cost, sym, value)
     end
