@@ -246,7 +246,7 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), meth
     else
         cost = nothing        
         #---Check if the function has a list of parameters or a single array---------------------------
-        arraycall = get_nargs(fcn) == 1 && length(x0) > 1 ? true : false
+        arraycall = get_nargs(fcn) == 1 && (length(x0) > 1 || length(x0[1]) > 1) ? true : false
         #---Get the arguments names-------------------------------------------------------------------
         if names === ()
             if arraycall
@@ -265,6 +265,8 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), meth
     # If x0 is not provided, use the keyword arguments of the form <par>=<value>-------------------
     if x0 === ()
         x0 = [kwargs[Symbol(n)] for n in names]
+    elseif length(x0) == 1
+        x0 = collect(x0[1])
     else
         x0 = collect(x0)
     end

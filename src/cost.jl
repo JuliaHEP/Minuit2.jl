@@ -226,49 +226,56 @@ function getproperty(cost::BinnedNLL, sym::Symbol)
     end
 end
 
-function value(cost::BinnedNLL, args)
-    s = Base.size(cost.bincounts)
-    @show args[1], args[2], args[3], args[4]
+function _pred_approx(cost::BinnedNLL, args)
+    if cost.ndim == 1
+        centers = [(cost.binedges[i] + cost.binedges[i+1])/2 for i in 1:length(cost.bincounts)]
+        f = cost.model.(centers, args...) * (cost.binedges[2] - cost.binedges[1])
+    elseif cost.ndim == 2
+        s = Base.size(cost.bincounts)
+        edgx, edgy = cost.binedges
+        f = [cost.model(((edgx[i]+edgx[i+1])/2, (edgy[j]+edgy[j+1])/2), args...) for i in 1:s[1], j in 1:s[2]]
+    else
+        throw(ArgumentError("only 1D and 2D histograms are supported"))
+    end
+    return f
+end
+function _pred_cdf(cost::BinnedNLL, args)
+    if cost.ndim == 1
+        f = diff(cost.model.(cost.binedges, args...))
+        f[f .<= 0] .= F64_TINY
+    elseif cost.ndim == 2
+        s = Base.size(cost.bincounts)
+        edgx, edgy = cost.binedges
+        binarea = (edgx[2]-edgx[1]) * (edgy[2]-edgy[1])
+        f = [cost.model((edgx[i+1], edgy[j+1]),args...) - cost.model((edgx[i], edgy[j]),args...)*binarea for i in 1:s[1], j in 1:s[2]]
+        f = f
+    else
+        throw(ArgumentError("only 1D and 2D histograms are supported"))
+    end
+    return f
+end
+function _pred(cost, args)
     if cost.use_pdf == :approximate
-        if cost.ndim == 1
-            centers = [(cost.binedges[i] + cost.binedges[i+1])/2 for i in 1:s[1]]
-            f = cost.model.(centers, args...)
-        elseif cost.ndim == 2
-            edgx, edgy = cost.binedges
-            f = [cost.model(((edgx[i]+edgx[i+1])/2, (edgy[i]+edgy[i+1])/2), args...) for i in 1:s[1], j in 1:s[2]]
-        else
-            throw(ArgumentError("only 1D and 2D histograms are supported"))
-        end
+        p = _pred_approx(cost, args)
     elseif cost.use_pdf == :numerical
         throw(ArgumentError("numerical calculation not implemented yet"))
     else
-        if cost.ndim == 1
-            f = diff(cost.model.(cost.binedges, args...))
-            f[f .<= 0] .= F64_TINY
-        elseif cost.ndim == 2
-            edgx, edgy = cost.binedges
-            f = [cost.model((edgx[i+1], edgy[j+1]),args...) - cost.model((edgx[i], edgy[j]),args...) for i in 1:s[1], j in 1:s[2]]
-        else
-            throw(ArgumentError("only 1D and 2D histograms are supported"))
-        end
+        p = _pred_cdf(cost, args)
     end
-    r = multinomial_chi2(cost.bincounts, f)
-    @show r
+    # scale probabilities with number entries
+    return p .* sum(cost.bincounts)
+end
+
+function value(cost::BinnedNLL, args)
+    p = _pred(cost, args)
+    r = multinomial_chi2(cost.bincounts, p)
     return r
 end
 
 function grad(cost::BinnedNLL, args)
-    if cost.use_pdf == :approximate
-        centers = [0.5*(cost.binedges[i] + cost.binedges[i+1]) for i in 1:length(cost.binedges)-1]
-        f = cost.model.(centers, args...)
-    elseif cost.use_pdf == :numerical
-        throw(ArgumentError("numerical calculation not implemented yet"))
-    else
-        f = diff(cost.model.(cost.binedges, args...))
-        f[f .<= 0] = F64_TINY
-    end
+    p = _pred(cost, args)
     gf = cost.model_grad.(centers, args)
-    multinomial_chi2_grad(n, f, gf)
+    multinomial_chi2_grad(n, p, gf)
 end
 
 #---LeastSquares cost function--------------------------------------------------------------------
