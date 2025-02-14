@@ -119,6 +119,8 @@ errordef(::CostFunction) = CHISQUARE
 npar(cost::CostFunction) = length(cost.base.parameters)
 verbose(cost::CostFunction) = cost.base.verbose
 verbose(cost::CostFunction, level::Int) = (cost.base.verbose = level; cost)
+(cost::CostFunction)(args...) = value(cost, args)
+
 function show(io::IO, cost::CostFunction)
     modelname = hasproperty(cost, :model) ? "$(cost.model)" : "unknown"
     print(io, "$(typeof(cost)) cost function of \"$modelname\" with parameters $(cost.parameters)")
@@ -144,12 +146,12 @@ mutable struct UnbinnedNLL <: CostFunction
     model_grad::Union{Function, Nothing}
 end
 
-function UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, pdf_grad=nothing, names=())
+function UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, model_grad=nothing, names=())
     if ndims(data) == 1 && eltype(data) <: Tuple
         data = reduce(vcat, [[t...]' for t in data])
     end
     params = model_parameters(pdf, names)
-    UnbinnedNLL(BaseCost(verbose, params), log, data, mask, pdf, pdf_grad)
+    UnbinnedNLL(BaseCost(verbose, params), log, data, mask, pdf, model_grad)
 end
 errordef(::UnbinnedNLL) = NEGATIVE_LOG_LIKELIHOOD
 has_grad(cost::UnbinnedNLL) = cost.model_grad !== nothing
@@ -186,8 +188,19 @@ end
 function grad(cost::UnbinnedNLL, args)
     isnothing(cost.model_grad) && throw(ArgumentError("no gradient available"))
     data = isnothing(cost.mask) ? cost.data : cost.data[cost.mask]
-    g = cost.model_grad.(data, args)
-    -2.0 * sum(g)
+    g = cost.model_grad.(data, args...)
+    if cost.ndim == 1
+        if cost.log == false
+            f = cost.model.(data, args...)
+            g = g ./ f       
+        end
+    else
+        if cost.log == false
+            f = [cost.model(data[i,:], args...) for i in 1:cost.len]
+            g = g ./ f
+        end
+    end
+    return -2.0 * sum(g)
 end
 
 #---BinnedNLL cost function-----------------------------------------------------------------------
