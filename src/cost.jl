@@ -11,9 +11,7 @@ import Base: getproperty, setproperty!, propertynames, show
 export LeastSquares, Constant, CostFunction, BaseCost, UnbinnedNLL, BinnedNLL
 export value, grad, has_grad
 
-"""
-    BaseCost
-"""
+
 mutable struct BaseCost
     verbose::Int
     parameters::Vector{String}
@@ -35,7 +33,7 @@ The value returned by this function is chi2-distributed, if the observed values 
 normally distributed around the expected values with the provided standard
 deviations.
 
-## Parameters
+## Arguments
 - `y` : Observed values.
 - `ye` : Uncertainties of values.
 - `ym` : Expected values.
@@ -44,28 +42,32 @@ deviations.
 - Value of cost function.
 """
 chi2(y, ye, ym) = sum(z_squared(y, ye, ym))
+
+"""
+    soft_l1_cost(y, ye, ym)
+"""
 soft_l1_cost(y, ye, ym) = 2 * sum(sqrt.(1 .+ z_squared(y, ye, ym)) .- 1)
 
 """
-Compute gradient of :func:`chi2`.
+    chi2_grad(y, ye, ym, gym)
 
-    Parameters
-    ----------
-    y : array-like  with shape (N,)
-        Observed values.
-    ye : array-like  with shape (N,)
-        Uncertainties of values.
-    ym : array-like with shape (N,)
-        Expected values.
-    gym : array-like with shape (K, N)
-        Gradient of ym with respect to K model parameters.
+Compute gradient of function `chi2`.
 
-    Returns
-    -------
-    array with shape (K,)
-        Gradient of cost function with respect to model parameters.
-    """
+## Arguments
+- `y` : Observed values.
+- `ye` : Uncertainties of values.
+- `ym` : Expected values.
+- `gym` : Gradient of ym with respect to K model parameters.
+
+## Returns
+- Gradient of cost function with respect to model parameters.  
+"""
 chi2_grad(y, ye, ym, gym) = -2 * sum((y .- ym) .* gym .* ye.^-2)
+
+"""
+    soft_l1_cost_grad(y, ye, ym, gym)
+
+"""
 function soft_l1_cost_grad(y, ye, ym, gym)
     z = (y .- ym) ./ ye
     f = (1 .+ z.^2).^-0.5
@@ -73,40 +75,41 @@ function soft_l1_cost_grad(y, ye, ym, gym)
 end
 
 log_or_zero(x) = x <= 0.0 ? 0.0 : log(x)
+
 """
-    Compute asymptotically chi2-distributed cost for multinomially-distributed data.
+    multinomial_chi2(n, mu)
 
-    See Baker & Cousins, NIM 221 (1984) 437-442.
+Compute asymptotically chi2-distributed cost for multinomially-distributed data.
+See Baker & Cousins, NIM 221 (1984) 437-442.
 
-    Parameters
-    ----------
-    n : array-like
-        Observed counts.
-    mu : array-like
-        Expected counts. Must satisfy sum(mu) == sum(n).
+## Arguments
+- `n` : Observed counts.
+- `mu` Expected counts. Must satisfy sum(mu) == sum(n).
 
-    Returns
-    -------
-    float
-        Cost function value.
+## Returns
+- Cost function value.
 
-    Notes
-    -----
-    The implementation makes the result asymptotically chi2-distributed,
-    which helps to maximise the numerical accuracy for Minuit.
-
+## Notes
+The implementation makes the result asymptotically chi2-distributed,
+which helps to maximise the numerical accuracy for Minuit.
 """
 multinomial_chi2(n, mu) = 2 * sum(n .* (log_or_zero.(n) .- log_or_zero.(mu)))
-multinomial_chi2_grad(n, mu, gmu) = - 2 * sum( n ./( mu .* gmu))
+
+"""
+    multinomial_chi2_grad(n, mu, gmu)
+
+Compute gradient of function `multinomial_chi2`.
+"""
+multinomial_chi2_grad(n, mu, gmu) = - 2 .* sum( n ./( mu .* gmu))'
 
 function model_parameters(model, names)
     # strip first argument from model
     args = get_argument_names(model)[2:end]
     if length(names) > 0
-        if length(args) == length(names)
-            params = names
+        if length(args) == length(names) || length(args) == 1
+            params = [n for n in names]
         else
-            throw(ValueError("length of names does not match number of model parameters"))
+            throw(ArgumentError("length of names does not match number of model parameters"))
         end
     else
         params = args
@@ -130,6 +133,12 @@ struct Constant <: CostFunction
     base::BaseCost
     value::Float64
 end
+
+"""
+    Constant(value::Float64; verbose::Int=0)
+
+Constant cost function with fixed value.
+"""
 Constant(value::Float64; verbose::Int=0) = Constant(BaseCost(verbose, []), value)
 value(cost::Constant) = cost.value
 grad(cost::Constant) = 0.0
@@ -146,6 +155,36 @@ mutable struct UnbinnedNLL <: CostFunction
     model_grad::Union{Function, Nothing}
 end
 
+"""
+    UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, model_grad=nothing, names=())
+
+Unbinned negative log-likelihood cost function.
+
+## Arguments
+- `data::AbstractArray` : Sample of observations. If the observations are multidimensional, data must
+  have the shape (D, N), where D is the number of dimensions and N the number of data points.
+- `pdf::Function` : Probability density function of the form f(data, par0, [par1, ...]), where
+  data is the data sample and par0, ... are model parameters. If the data are
+  multivariate, data passed to f has shape (D,), where D is the number of
+  dimensions and N the number of data points.
+- `verbose::Int` : Verbosity level. 0: is no output (default). 1: print current args and
+  negative log-likelihood value.
+- `log::Bool=false` : Distributions of the exponential family (normal, exponential, poisson, ...)
+  allow one to compute the logarithm of the pdf directly, which is more
+  accurate and efficient than numerically computing ``log(pdf)``. Set this
+  to `true`, if the model returns the logpdf instead of the pdf.
+- `grad::Union{Function, Nothing}` : Optionally pass the gradient of the pdf. Has the same calling signature like
+  the pdf, but must return an array with the shape (K, N), where N is the
+  number of data points and K is the number of parameters. If `log` is True,
+  the function must return the gradient of the logpdf instead of the pdf. The
+  gradient can be used by Minuit to improve or speed up convergence and to
+  compute the sandwich estimator for the variance of the parameter estimates.
+- `names` : Optional names for each parameter of the model (in order). Must have the
+  same length as there are model parameters. Default is None.
+
+## Returns
+- Cost function object.
+"""
 function UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, model_grad=nothing, names=())
     if ndims(data) == 1 && eltype(data) <: Tuple
         data = reduce(vcat, [[t...]' for t in data])
@@ -188,13 +227,14 @@ end
 function grad(cost::UnbinnedNLL, args)
     isnothing(cost.model_grad) && throw(ArgumentError("no gradient available"))
     data = isnothing(cost.mask) ? cost.data : cost.data[cost.mask]
-    g = cost.model_grad.(data, args...)
     if cost.ndim == 1
+        g = cost.model_grad.(data, args...)
         if cost.log == false
             f = cost.model.(data, args...)
             g = g ./ f       
         end
     else
+        g = [cost.model_grad(data[i,:], args...) for i in 1:cost.len]
         if cost.log == false
             f = [cost.model(data[i,:], args...) for i in 1:cost.len]
             g = g ./ f
@@ -213,6 +253,33 @@ mutable struct BinnedNLL <: CostFunction
     use_pdf::Symbol
 end
 
+"""
+    BinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tuple}, cdf::Function; use_pdf=:none, verbose=0,  grad=nothing, names=())
+
+Binned negative log-likelihood.
+
+Use this if only the shape of the fitted PDF is of interest and the data is binned. This cost function works with normal and weighted histograms. 
+The histogram can be one- or multi-dimensional.
+
+## Arguments
+- `bincounts::AbstractArray` : Histogram counts. If this is an array with dimension D, where D is the number of histogram axes.
+- `xe::Union{AbstractArray, Tuple}` : Bin edge locations, must be len(n) + 1, where n is the number of bins. 
+  If the histogram has more than one axis, xe must be a collection of the bin edge locations along each axis.
+- `cdf::Function` : Cumulative density function of the form f(xe, par0, par1, ..., parN),
+   where xe is a bin edge and par0, ... are model parameters. The corresponding density must be normalized to unity 
+   over the space covered by the histogram. If the model is multivariate, xe must be an array-like with shape (D, N),
+   where D is the dimension and N is the number of points where the model is evaluated.
+- `verbose::Int` : Verbosity level. 0: is no output.
+- `grad::Union{Function, Nothing} : Optionally pass the gradient of the `cdf``. Has the same calling signature like the cdf, 
+   but must return an array with the shape (K,), where K is the number of parameters. The gradient can be used by Minuit to 
+   improve or speed up convergence.
+- `use_pdf::Symbol`: Either `:none`, `:numerical`, or `:approximate`. If the model cdf is not available, but the model pdf is, 
+   this option can be set to "numerical" or "approximate" to compute the integral of the pdf over the bin. The option "numerical" 
+   uses numerical integration, which is accurate but computationally expensive and only supported for 1D histograms. The
+   option "approximate" uses the zero-order approximation of evaluating the pdf at the bin center, multiplied with the bin area.
+   This is fast and works in higher dimensions, but can lead to biased results if the curvature of the pdf inside the bin is significant.
+- `names` : Optional names for each parameter of the model (in order). Must have the same length as there are model parameters.
+"""
 function BinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tuple}, cdf::Function; use_pdf=:none, verbose=0,  grad=nothing, names=())
     ndim = ndims(bincounts)
     ndim < 2 || binedges isa Tuple || throw(ArgumentError("binedges must be a Tuple"))
@@ -287,8 +354,9 @@ end
 
 function grad(cost::BinnedNLL, args)
     p = _pred(cost, args)
-    gf = cost.model_grad.(centers, args)
-    multinomial_chi2_grad(n, p, gf)
+    centers = [(cost.binedges[i] + cost.binedges[i+1])/2 for i in 1:length(cost.bincounts)]
+    gf = cost.model_grad.(centers, args...)
+    multinomial_chi2_grad(cost.bincounts, p, gf)
 end
 
 #---LeastSquares cost function--------------------------------------------------------------------
@@ -304,6 +372,40 @@ mutable struct LeastSquares <: CostFunction
     ndim::Int
 end
 
+"""
+    LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Function; 
+                     loss=:linear, verbose=0, model_grad=nothing, names=(), mask=nothing)
+
+Least-squares cost function (aka chisquare function).
+
+Use this if you have data of the form (x, y +/- yerror), where x can be one-dimensional or multi-dimensional, 
+but y is always one-dimensional.
+
+## Arguments
+- `x::AbstractArray` : Locations where the model is evaluated. If the model is multivariate, x must
+        have shape (D, N), where D is the number of dimensions and N the number of data points.
+- `y::AbstractVector` : Observed values. Must have the same length as x.
+- `yerror` : Estimated uncertainty of observed values. Must have same shape as y or be a
+   scalar, which is then broadcasted to same shape as y.
+- `model::Function` : Function of the form f(x, par0, [par1, ...]) whose output is compared to
+   observed values, where x is the location and par0, ... are model parameters. If the model is multivariate, 
+   x has shape (D,), where D is the N the number of data points.
+- `loss::Union{Symbol, Function}` : The loss function can be modified to make the fit robust against outliers. Only ``:linear` and
+  `:soft_l1` are currently implemented, but users can pass any loss function as this argument. It should be a monotonic, twice differentiable function,
+   which accepts the squared residual and returns a modified squared residual.
+- `verbose::Int` :  Verbosity level. 0: is no output.
+- `model_grad::Union{Function, Nothing}` : Optionally pass the gradient of the model. Has the same calling signature like
+  the model, but must return an array with the shape (K,), where K is the number of parameters. 
+  The gradient can be used by Minuit to improve or speed up convergence.
+- `names` : Optional names for each parameter of the model (in order). Must have the same length as there are model parameters.
+- `mask::Union{Vector{Bool}, BitVector, Nothing}` : Optional mask to select a subset of the data. Must have the same length as x.
+
+## Notes
+Alternative loss functions make the fit more robust against outliers by
+weakening the pull of outliers. The mechanical analog of a least-squares fit is
+a system with attractive forces. The loss function can be modified to make the
+fit robust against outliers.
+"""
 function LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Function; 
                      loss=:linear, verbose=0, model_grad=nothing, names=(), mask=nothing)
     #---Check in x is a vector of tuples-----------------------------------------------------------

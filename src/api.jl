@@ -7,12 +7,6 @@ import Base: values
 
 export FCN, Minuit, migrad!, hesse!, matrix, minos!, contour, mncontour, profile, mnprofile
 
-"""
-    Minuit
-
-Minuit object to perform minimization. It keeps track of the function to minimize,
-the parameters, and the minimization results.
-"""
 mutable struct Minuit
     funcname::String                                # Name of the function
     cost::Union{CostFunction, Nothing}              # The cost function to minimize
@@ -100,6 +94,18 @@ function FCN(fnc::Function, grad=nothing, arraycall=false, errordef=1.0)
     return jf
 end
 
+"""
+    FCN(cost::CostFunction, grad=true)
+
+Create a JuliaFcn object from a CostFunction.
+
+## Arguments
+- `fnc::CostFunction` : The CostFunction to minimize.
+- `grad::Bool=true` : If `true`, the gradient of the cost function is used. If `false`, the gradient is not used. 
+
+## Returns
+- `JuliaFcn` : A JuliaFcn object inheriting from the abstract C++ class `Minuit::FCNBase`that can be used in Minuit.
+"""
 function FCN(cost::CostFunction, grad=true)
     errordef = cost.errordef
     COST = typeof(cost)

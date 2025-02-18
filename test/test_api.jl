@@ -167,7 +167,7 @@
         @test m.is_valid
 
 
-        x, f = profile(m, "x", size=20)
+        x, f = Minuit2.profile(m, "x", size=20)
         @test length(x) == 20
         @test length(f) == 20
         @test m.fcn(x[1], m.values["y"], m.values["z"]) == f[1]

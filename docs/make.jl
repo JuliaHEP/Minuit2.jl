@@ -12,7 +12,7 @@ function process_literate(names...)
     return tutorials_mds
 end
 
-basic_mds    = process_literate("introduction")
+basic_mds    = process_literate("introduction", "costfunctions")
 
 makedocs(;
     modules=[Minuit2],

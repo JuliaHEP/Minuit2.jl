@@ -56,7 +56,7 @@ Draw 1D cost function profile over a range (requires matplotlib).
 """
 function Minuit2.draw_profile(m::Minuit, var; band=true, text=true, kwargs...)
     ix, xname = Minuit2.keypair(m, var)
-    x, y = profile(m, ix; subtract_min=true, kwargs...)
+    x, y = Minuit2.profile(m, ix; subtract_min=true, kwargs...)
     v = m.values[ix]
     e = m.errors[ix]
     title = text ? "$xname= $(round(v, digits=3)) - $(round(e, digits=3)) + $(round(e, digits=3))" : nothing
