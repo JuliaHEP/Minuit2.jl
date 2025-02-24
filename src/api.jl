@@ -7,14 +7,9 @@ import Base: values
 
 export FCN, Minuit, migrad!, hesse!, matrix, minos!, contour, mncontour, profile, mnprofile
 
-"""
-    Minuit
-
-Minuit object to perform minimization. It keeps track of the function to minimize,
-the parameters, and the minimization results.
-"""
 mutable struct Minuit
     funcname::String                                # Name of the function
+    cost::Union{CostFunction, Nothing}              # The cost function to minimize
     fcn::JuliaFcn                                   # The function to minimize    
     x0::AbstractVector                              # Initial parameters values 
     npar::Int                                       # Number of parameters
@@ -65,7 +60,7 @@ jf.ngrad # returns the number of gradient calls
 jf.has_gradient # returns true
 ```
 """
-function FCN(fnc, grad=nothing, arraycall=false, errordef=1.0)
+function FCN(fnc::Function, grad=nothing, arraycall=false, errordef=1.0)
     if arraycall
         vf = fnc
     else
@@ -100,7 +95,67 @@ function FCN(fnc, grad=nothing, arraycall=false, errordef=1.0)
 end
 
 """
-    Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0, strategy=1,  kwargs...)
+    FCN(cost::CostFunction, grad=true)
+
+Create a JuliaFcn object from a CostFunction.
+
+## Arguments
+- `fnc::CostFunction` : The CostFunction to minimize.
+- `grad::Bool=true` : If `true`, the gradient of the cost function is used. If `false`, the gradient is not used. 
+
+## Returns
+- `JuliaFcn` : A JuliaFcn object inheriting from the abstract C++ class `Minuit::FCNBase`that can be used in Minuit.
+"""
+function FCN(cost::CostFunction, grad=true)
+    errordef = cost.errordef
+    COST = typeof(cost)
+    #---Check if the cost function has a gradient---------------------------------------------------
+    if grad && has_grad(cost)
+        fcn = Symbol(:_internal_cost_, length(callbacks))
+        gra = Symbol(:_internal_grad_, length(callbacks))
+        eval( 
+            quote
+                function $fcn(obj::Ptr{Cvoid}, args)::Float64
+                    costfunc = unsafe_pointer_to_objref(obj)::$COST
+                    Minuit2.value(costfunc, args)
+                end
+                function $gra(obj::Ptr{Cvoid}, grad, args)::Nothing
+                    costfunc = unsafe_pointer_to_objref(obj)::$COST
+                    _grad = Minuit2.grad(costfunc, args)
+                    for i in 1:length(grad)
+                        grad[i] = _grad[i]
+                    end
+                end
+            end )
+        sf = eval( quote
+                    @safe_cfunction($fcn, Float64, (Ptr{Cvoid}, ConstCxxRef{StdVector{Float64}},))
+                   end )
+        sg = eval( quote
+                    @safe_cfunction($gra, Cvoid, (Ptr{Cvoid}, CxxRef{StdVector{Float64}}, ConstCxxRef{StdVector{Float64}})) 
+                   end )
+        push!(callbacks, sf)
+        push!(callbacks, sg)
+        return JuliaFcn(sf, sg, pointer_from_objref(cost), errordef)
+    else
+        fcn = Symbol(:_internal_cost_, length(callbacks))
+        eval( 
+            quote
+                function $fcn(obj::Ptr{Cvoid}, args)::Float64
+                    costfunc = unsafe_pointer_to_objref(obj)::$COST
+                    Minuit2.value(costfunc, args)
+                end
+            end )
+        sf = eval( quote
+                    @safe_cfunction($fcn, Float64, (Ptr{Cvoid}, ConstCxxRef{StdVector{Float64}},)) 
+                end )
+        push!(callbacks, sf)
+        return JuliaFcn(sf,  pointer_from_objref(cost), errordef)
+    end
+end
+
+
+"""
+    Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0, strategy=1,  kwargs...)
 
 Initialize a Minuit object.
 
@@ -108,11 +163,12 @@ This does not start the minimization or perform any other work yet. Algorithms
 are started by calling the corresponding methods.
 
 ## Arguments
-- `fcn::Function` : Function to minimize. See notes for details on what kind of functions are accepted.
+- `fcn::Union{Function,CostFunction}` : Function to minimize. See notes for details on what kind of functions are accepted.
 - `x0::AbstractArray` : Starting values for the minimization. See notes for details on how to set starting values.
-- `grad::Union{Function,Nothing}` : If `grad` is a function, it must be a function that calculates the gradient
+- `grad::Union{Function,Nothing, Bool}` : If `grad` is a function, it must be a function that calculates the gradient
   and returns an iterable object with one entry for each parameter, which is
-  the derivative of `fcn` for that parameter. If `nothing` (default), Minuit will compute the gradient numerically.
+  the derivative of `fcn` for that parameter. If `nothing` (default), Minuit will use the gradient of the provided 
+  cost function. If it does not exists Minuit will compute the gradient numerically. If `grad` is `false`, Minuit will not use the gradient.
 - `error::AbstractArray` : Starting values for the errors of the parameters. If not provided, Minuit will use 0.1 for all parameters.
 - `errordef::Real` : Error definition of the function. Minuit defines parameter errors as the change in parameter 
   value required to change the function value by `errordef`. Normally, for chisquared fits it is 1, and for negative log likelihood,
@@ -186,27 +242,39 @@ Setting the values with keywords is not possible in this case. Minuit
 deduces the number of parameters from the length of the initialization
 sequence.
 """
-function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, 
+function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, 
                 tolerance=0.1, precision=nothing, strategy=1, kwargs...)
-    #---Check if the function has a list of parameters or a single array---------------------------
-    arraycall = get_nargs(fcn) == 1 && length(x0) > 1 ? true : false
-    #---Get the arguments names-------------------------------------------------------------------
-    if names === ()
-        if arraycall
-            n1 = get_argument_names(fcn)[1]
-            names = ["$n1[$i]" for i in 1:length(x0)]
-        else
-            names = get_argument_names(fcn)
+    if fcn isa CostFunction
+        cost = fcn
+        jf = FCN(fcn, grad isa Bool ? grad : true) # If grad is a boolean, use it to control it
+        funcname = "$(typeof(fcn))"
+        names = fcn.parameters
+    else
+        cost = nothing        
+        #---Check if the function has a list of parameters or a single array---------------------------
+        arraycall = get_nargs(fcn) == 1 && (length(x0) > 1 || length(x0[1]) > 1) ? true : false
+        #---Get the arguments names-------------------------------------------------------------------
+        if names === ()
+            if arraycall
+                n1 = get_argument_names(fcn)[1]
+                names = ["$n1[$i]" for i in 1:length(x0)]
+            else
+                names = get_argument_names(fcn)
+            end
         end
-    end
-    #---Construct the FCN object-------------------------------------------------------------------
-    jf = FCN(fcn, grad, arraycall, errordef)
-    #---Get the function name---------------------------------------------------------------------
-    funcname = string(first(methods(fcn)))
-    funcname = funcname[1:findfirst('@',funcname)-2]  
+        #---Construct the FCN object-------------------------------------------------------------------
+        jf = FCN(fcn, grad, arraycall, errordef)
+        #---Get the function name---------------------------------------------------------------------
+        funcname = string(first(methods(fcn)))
+        funcname = funcname[1:findfirst('@',funcname)-2]
+    end  
     # If x0 is not provided, use the keyword arguments of the form <par>=<value>-------------------
     if x0 === ()
         x0 = [kwargs[Symbol(n)] for n in names]
+    elseif length(x0) == 1
+        x0 = collect(x0[1])
+    else
+        x0 = collect(x0)
     end
     #---Create the user parameters-----------------------------------------------------------------
     userpars = MnUserParameterState()
@@ -229,7 +297,7 @@ function Minuit(fcn, x0=(); grad=nothing, error=(), errordef=1.0, names=(), meth
         haskey(kwargs, Symbol("fix_", name)) && Fix(userpars, i-1)
     end
     names = [Name(userpars, i-1) for i in 1:npar]
-    Minuit(funcname, jf, x0, npar, names, method, tolerance, precision, strategy, userpars, userpars, nothing, nothing, nothing)
+    Minuit(funcname, cost, jf, x0, npar, names, method, tolerance, precision, strategy, userpars, userpars, nothing, nothing, nothing)
 end
 
 """

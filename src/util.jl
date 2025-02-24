@@ -86,8 +86,8 @@ function _set(view::LimitView, ipar::Int, value)
     # bug in Minuit2: must set parameter value and error again after changing limits
     val < lower && (val = lower)
     val > upper && (val = upper)
-    SetValue(state, ipar, val)
-    SetError(state, ipar, err)
+    SetValue(state, ipar-1, val)
+    SetError(state, ipar-1, err)
     return (lower, upper)
 end
 eltype(::LimitView) = Tuple{Float64, Float64}
@@ -102,6 +102,81 @@ function _set(::MinosView, ::Int, value)
     throw(ArgumentError("Cannot set Minos results"))
 end
 eltype(::MinosView) = Union{MinosError, Nothing}
+
+#---Parameters--------------------------------------------------------------------------------------
+struct Param
+    parameter::MinuitParameter
+    minos::Union{MinosError, Nothing}
+end
+
+function getproperty(p::Param, name::Symbol)
+    if name == :value
+        return p.parameter.value
+    elseif name == :error
+        return p.parameter.error
+    elseif name == :lower_limit
+        return p.parameter.has_lower_limit ? p.parameter.lower_limit : -Inf
+    elseif name == :upper_limit
+        return p.parameter.has_upper_limit ? p.parameter.upper_limit : Inf
+    elseif name == :is_fixed
+        return p.parameter.is_fixed
+    elseif name == :is_const
+        return p.parameter.is_const
+    elseif name == :has_limits
+        return p.parameter.has_lower_limit || p.parameter.has_upper_limit
+    elseif name == :name
+        return p.parameter.name
+    elseif name == :number
+        return p.parameter.number
+    elseif name == :merror
+        return p.minos === nothing ? nothing : (p.minos.lower, p.minos.upper)
+    else
+        return getfield(p, name)
+    end
+end
+
+struct ParamView <: AbstractView;  minuit::Minuit; end
+function _get(view::ParamView, ipar::Int)
+    _, key = keypair(view.minuit, ipar)
+    mino = view.minuit.mino
+    merror = !isnothing(mino) && haskey(mino, key) ?  mino[key] : nothing 
+    Param(view.minuit.last_state[ipar][], merror)
+end
+
+function _set(::ParamView, ::Int, value)
+    throw(ArgumentError("Cannot set Parameter values"))
+end
+eltype(::ParamView) = Param
+
+function show(io::IO, p::Param)
+    print(io, "Parameter $(p.parameter.number): $(p.parameter.name) = $(p.parameter.value) ± $(p.parameter.error)")
+    if p.parameter.has_lower_limit || p.parameter.has_upper_limit
+        print(io, " [$(p.parameter.lower_limit), $(p.parameter.upper_limit)]")
+    end
+    if p.parameter.is_fixed
+        print(io, " (fixed)")
+    end
+    if p.parameter.is_const
+        print(io, " (constant)")
+    end
+    if p.minos !== nothing
+        print(io, " Minos: $(p.minos.lower) $(p.minos.upper)")
+    end
+end
+function show(io::IO, view::ParamView)
+    header = [" ", "Name", "Value", "Hesse Error",  "Minos-", "Minos+", "Limit-", "Limit+", "Fixed", "Const"]
+    number = [p.number for p in view]
+    names = [p.name for p in view]
+    values = [p.value for p in view]
+    errors = [p.error for p in view]
+    minos_err_low = [ isnothing(p.minos) ? " " : p.minos.lower for p in view]
+    minos_err_high = [ isnothing(p.minos) ? " " : p.minos.upper for p in view]
+    limit_low = [p.lower_limit == -Inf ?  " " : p.lower_limit for p in view]
+    limit_up  = [p.upper_limit ==  Inf ?  " " : p.upper_limit for p in view]
+    fixed = [ p.is_fixed ? true : " " for p in view]
+    consta = [ p.is_const ? true : " " for p in view]
+    pretty_table(io, [number names values errors minos_err_low minos_err_high limit_low limit_up fixed consta]; header=header, alignment=:l)
+end
 
 #---Minuit property accessors-----------------------------------------------------------------------
 function getproperty(m::Minuit, name::Symbol)
@@ -145,6 +220,8 @@ function getproperty(m::Minuit, name::Symbol)
         return HesseFailed(m.fmin)
     elseif name == :has_covariance
         return HasCovariance(m.fmin)
+    elseif name == :covariance
+        return UserCovariance(m.fmin)[]
     elseif name == :has_accurate_covar
         return HasAccurateCovar(m.fmin)
     elseif name == :has_valid_parameters
@@ -153,45 +230,37 @@ function getproperty(m::Minuit, name::Symbol)
         return HasReachedCallLimit(m.fmin)
     elseif name == :minos
         return MinosView(m)
+    elseif name == :parameters
+        return ParamView(m)
     else
         return getfield(m, name)
     end
 end
 
+function show(io::IO, f::FunctionMinimum)
+    data1 = ["FCN"        "Method"     "Ncalls"   "Iterations" "Up";
+    f.fval       " "      f.nfcn     f.niter     f.up;
+    "Valid Min."     "Valid Param."	      "Above EDM"           "Call limit"              "Edm";
+    f.is_valid	     f.has_valid_parameters  f.is_above_max_edm	f.has_reached_call_limit  f.edm;
+    "Hesse failed"	 "Has cov."	          "Accurate"	        "Pos. def."               "Forced";
+    f.hesse_failed   f.has_covariance     f.has_accurate_covar	f.has_posdef_covar        f.has_made_posdef_covar]
+    pretty_table(io, data1; alignment=:l, show_header=false, body_hlines = [2,4])
+end
 
 function Base.show(io::IO, m::Minuit)
     if m.app === nothing
         print(io, "Minuit(FCN = $(m.funcname), X0 = $(m.x0), Method = $(m.method))")
-        return
-    end
-    if !isnothing(m.fmin)
-        #---Print the minimization results-------------------------------------------------------------
-        data1 = ["FCN"        "Method"     "Ncalls"   "Iterations" "Up";
-                 m.fval       m.method      m.nfcn     m.niter     m.up;
-                 "Valid Min."     "Valid Param."	      "Above EDM"           "Call limit"              "Edm";
-                 m.is_valid	      m.has_valid_parameters  m.is_above_max_edm	m.has_reached_call_limit  m.edm;
-                 "Hesse failed"	  "Has cov."	          "Accurate"	        "Pos. def."               "Forced";
-                 m.hesse_failed   m.has_covariance        m.has_accurate_covar	m.has_posdef_covar        m.has_made_posdef_covar]
-        pretty_table(io, data1; alignment=:l, show_header=false, body_hlines = [2,4])
-    end
-    if !isnothing(m.app)
-        #---Print the parameters
-        npar     = m.npar
-        header = ["Name", "Value", "Hesse Error",  "Minos-", "Minos+", "Limit-", "Limit+", "Fixed"]
-        names = m.names
-        values = m.values |> collect
-        errors = m.errors |> collect
-        if m.mino === nothing
-            minos_err_low = [ " " for i in 1:npar]
-            minos_err_high = [ " " for i in 1:npar]
-        else
-            minos_err_low =  [ isnothing(m.minos[i]) ? " " : m.minos[i].lower for i in 1:npar]
-            minos_err_high = [ isnothing(m.minos[i]) ? " " : m.minos[i].upper for i in 1:npar]
+    else
+        if !isnothing(m.fmin)
+            show(io, m.fmin)
         end
-        limit_low = [m.limits[i][1] == -Inf ?  " " : m.limits[i][1] for i in 1:npar]
-        limit_up  = [m.limits[i][2] ==  Inf ?  " " : m.limits[i][2] for i in 1:npar]
-        fixed = [ m.fixed[i] ? true : " " for i in 1:npar]
-        pretty_table(io, [names values errors minos_err_low minos_err_high limit_low limit_up fixed]; header=header, alignment=:l)
+        show(io, m.parameters)
+        if m.has_covariance
+            cov = [m.covariance(i, j) for i in 1:m.npar, j in 1:m.npar]
+            header = [" ", m.names...]
+            data = hcat(m.names, cov)
+            pretty_table(io, data; header=header, alignment=:l, show_header=true)
+        end
     end
 end
 

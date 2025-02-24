@@ -1,5 +1,6 @@
 module Minuit2PlotsExt
 using Minuit2
+using FHist
 
 isdefined(Base, :get_extension) ? (using Plots) : (using ..Plots)
 
@@ -55,7 +56,7 @@ Draw 1D cost function profile over a range (requires matplotlib).
 """
 function Minuit2.draw_profile(m::Minuit, var; band=true, text=true, kwargs...)
     ix, xname = Minuit2.keypair(m, var)
-    x, y = profile(m, ix; subtract_min=true, kwargs...)
+    x, y = Minuit2.profile(m, ix; subtract_min=true, kwargs...)
     v = m.values[ix]
     e = m.errors[ix]
     title = text ? "$xname= $(round(v, digits=3)) - $(round(e, digits=3)) + $(round(e, digits=3))" : nothing
@@ -82,4 +83,52 @@ function Minuit2.draw_mnprofile(m::Minuit, var; band=true, text=true, kwargs...)
     return plt
 end
 
+function Minuit2.visualize(m::Minuit; nbins=50, kwargs...)
+    isnothing(m.cost) && throw(ArgumentError("Minuit object does not have a cost function"))
+    m.cost.ndim > 1 && throw(ArgumentError("Cost function dimension > 1 not supported"))
+    cost = m.cost
+    if cost isa LeastSquares
+        x = cost.x
+        y = cost.y
+        yerr = cost.yerror
+        plt = plot(x, y, yerr=yerr, seriestype=:scatter, kwargs...)
+        if m.is_valid
+            pars = m.values
+            yt = cost.model.(x, pars...)
+            plt = plot!(plt, x, yt; label="Fit")
+        end
+        return plt
+    elseif cost isa UnbinnedNLL
+        h = Hist1D(cost.data, nbins=nbins)
+        x = bincenters(h)
+        y = bincounts(h)
+        dy = sqrt.(y)
+        plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
+        if m.is_valid
+            scale = prod(Base.size(cost.data))*(x[2]-x[1])
+            pars = m.values
+            plot!(plt, x -> cost.model(x, pars...)*scale; label="Fit")
+        end
+        return plt
+    elseif cost isa BinnedNLL
+        x = [0.5*(cost.binedges[i] + cost.binedges[i+1]) for i in 1:length(cost.binedges)-1]
+        dx = (x[2]-x[1])/2
+        y = cost.bincounts
+        dy = sqrt.(y)
+        plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
+        if m.is_valid
+            scale = sum(cost.bincounts)
+            pars = m.values
+            if cost.use_pdf == :approximate
+                f = x -> cost.model(x, pars...)*scale*2dx
+            else
+                f = x -> (cost.model(x+dx, pars...)-cost.model(x-dx, pars...))*scale
+            end
+            plot!(plt, f; label="Fit")
+        end
+        return plt
+    else
+        throw(ArgumentError("Cost function type not supported (yet)"))
+    end
+end
 end

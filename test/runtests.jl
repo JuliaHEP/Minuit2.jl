@@ -6,4 +6,5 @@ using Test
     include("test_functions.jl")
     include("test_util.jl")
     include("test_api.jl")
+    include("test_cost.jl")
 end

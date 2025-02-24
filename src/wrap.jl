@@ -141,9 +141,9 @@ release(p::MnUserParameterState, i::Int) = Release(p, i-1)
 export MinuitParameter
 const MinuitParameter = ROOT!Minuit2!MinuitParameter
 
-function getproperty(s::ConstCxxRef{MinuitParameter}, sym::Symbol)
+function getproperty(s::Union{ConstCxxRef{MinuitParameter},MinuitParameter}, sym::Symbol)
     if sym == :number
-        return Number(s)
+        return Number(s) + 1
     elseif sym == :name
         return Name(s)
     elseif sym == :value
@@ -251,6 +251,34 @@ function getproperty(f::FunctionMinimum, sym::Symbol)
         return Edm(f)
     elseif sym == :is_valid
         return IsValid(f)
+    elseif sym == :nfcn
+        return NFcn(f)
+    elseif sym == :niter
+        return NIter(f)
+    elseif sym == :up
+        return Up(f)
+    elseif sym == :errordef
+        return Up(f)
+    elseif sym == :is_above_max_edm
+        return IsAboveMaxEdm(f)
+    elseif sym == :has_parameters_at_limit
+        return HasParametersAtLimit(f)
+    elseif sym == :has_accurate_covar
+        return HasAccurateCovar(f)
+    elseif sym == :has_posdef_covar
+        return HasPosDefCovar(f)
+    elseif sym == :has_made_posdef_covar
+        return HasMadePosDefCovar(f)
+    elseif sym == :hesse_failed
+        return HesseFailed(f)
+    elseif sym == :has_covariance
+        return HasCovariance(f)
+    elseif sym == :has_accurate_covar
+        return HasAccurateCovar(f)
+    elseif sym == :has_valid_parameters
+        return HasValidParameters(f)
+    elseif sym == :has_reached_call_limit
+        return HasReachedCallLimit(f)
     else
         return getfield(f, sym)
     end

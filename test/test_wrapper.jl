@@ -35,11 +35,11 @@ fn_grad(x, y) = (2 * x, y - 1)
         Add(st, "x", 1, 0.2)
         Add(st, "😁", 3, 0.3, 1, 4)
         @test length(st) == 2
-        @test st[1].number == 0
+        @test st[1].number == 1
         @test st[1].name == "x"
         @test st[1].value == 1
         @test st[1].error == 0.2
-        @test st[2].number == 1
+        @test st[2].number == 2
         @test st[2].name == "😁"
         @test st[2].value == 3
         @test st[2].error == 0.3
