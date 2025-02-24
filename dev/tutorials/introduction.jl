@@ -1,5 +1,6 @@
 using Minuit2
 using Polynomials
+using FHist
 using Plots
 
 # let's make a line model

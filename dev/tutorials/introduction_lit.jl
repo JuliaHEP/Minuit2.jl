@@ -20,6 +20,7 @@
 # display results.
 using Minuit2
 using Polynomials
+using FHist
 using Plots
 
 # ## Define some data to fit
