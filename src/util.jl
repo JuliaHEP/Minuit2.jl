@@ -86,8 +86,8 @@ function _set(view::LimitView, ipar::Int, value)
     # bug in Minuit2: must set parameter value and error again after changing limits
     val < lower && (val = lower)
     val > upper && (val = upper)
-    SetValue(state, ipar, val)
-    SetError(state, ipar, err)
+    SetValue(state, ipar-1, val)
+    SetError(state, ipar-1, err)
     return (lower, upper)
 end
 eltype(::LimitView) = Tuple{Float64, Float64}
