@@ -100,7 +100,7 @@ multinomial_chi2(n, mu) = 2 * sum(n .* (log_or_zero.(n) .- log_or_zero.(mu)))
 
 Compute gradient of function `multinomial_chi2`.
 """
-multinomial_chi2_grad(n, mu, gmu) = - 2 .* sum( n ./( mu .* gmu))'
+multinomial_chi2_grad(n, mu, gmu) = - 2 * sum( (n ./ mu)' * gmu, dims=1)
 
 function model_parameters(model, names)
     # strip first argument from model
@@ -124,7 +124,7 @@ verbose(cost::CostFunction) = cost.base.verbose
 verbose(cost::CostFunction, level::Int) = (cost.base.verbose = level; cost)
 (cost::CostFunction)(args...) = value(cost, args)
 
-function show(io::IO, cost::CostFunction)
+function Base.show(io::IO, cost::CostFunction)
     modelname = hasproperty(cost, :model) ? "$(cost.model)" : "unknown"
     print(io, "$(typeof(cost)) cost function of \"$modelname\" with parameters $(cost.parameters)")
 end
@@ -156,7 +156,7 @@ mutable struct UnbinnedNLL <: CostFunction
 end
 
 """
-    UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, model_grad=nothing, names=())
+    UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, grad=nothing, names=())
 
 Unbinned negative log-likelihood cost function.
 
@@ -185,16 +185,16 @@ Unbinned negative log-likelihood cost function.
 ## Returns
 - Cost function object.
 """
-function UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, model_grad=nothing, names=())
+function UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, grad=nothing, names=())
     if ndims(data) == 1 && eltype(data) <: Tuple
         data = reduce(vcat, [[t...]' for t in data])
     end
     params = model_parameters(pdf, names)
-    UnbinnedNLL(BaseCost(verbose, params), log, data, mask, pdf, model_grad)
+    UnbinnedNLL(BaseCost(verbose, params), log, data, mask, pdf, grad)
 end
 errordef(::UnbinnedNLL) = NEGATIVE_LOG_LIKELIHOOD
 has_grad(cost::UnbinnedNLL) = cost.model_grad !== nothing
-ndata(cost::UnbinnedNLL) = size(cost.data, 1)
+ndata(cost::UnbinnedNLL) = Base.size(cost.data, 1)
 
 function getproperty(cost::UnbinnedNLL, sym::Symbol)
     if hasproperty(getfield(cost, :base), sym)
@@ -346,6 +346,16 @@ function _pred(cost, args)
     return p .* sum(cost.bincounts)
 end
 
+function _pred_grad(cost::BinnedNLL, args)
+    if cost.use_pdf == :approximate
+        centers = [(cost.binedges[i] + cost.binedges[i+1])/2 for i in 1:length(cost.bincounts)]
+        gf = cost.model_grad.(centers, args...)*(cost.binedges[2] - cost.binedges[1])*sum(cost.bincounts)
+    else
+        gf = diff(cost.model_grad.(cost.binedges, args...))*sum(cost.bincounts)
+    end
+    return  [gf[i][j] for i in 1:cost.ndata, j in 1:cost.npar]
+end
+
 function value(cost::BinnedNLL, args)
     p = _pred(cost, args)
     r = multinomial_chi2(cost.bincounts, p)
@@ -354,8 +364,7 @@ end
 
 function grad(cost::BinnedNLL, args)
     p = _pred(cost, args)
-    centers = [(cost.binedges[i] + cost.binedges[i+1])/2 for i in 1:length(cost.bincounts)]
-    gf = cost.model_grad.(centers, args...)
+    gf = _pred_grad(cost, args)
     multinomial_chi2_grad(cost.bincounts, p, gf)
 end
 

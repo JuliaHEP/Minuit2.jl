@@ -37,7 +37,7 @@ using FHist
     @testset "UnbinnedNLL$model$(glabel(use_grad))" for model in (_pdf, _logpdf,), use_grad in (false, true)
         x, (μ, σ, n) = unbinned()
 
-        cost = UnbinnedNLL(x, model, log=(model ==_logpdf), model_grad=numerical_model_gradient(model))
+        cost = UnbinnedNLL(x, model, log=(model ==_logpdf), grad=numerical_model_gradient(model))
         @test cost.errordef == 0.5
         @test cost.npar == 2
 
@@ -81,7 +81,7 @@ using FHist
         truth = 0.1, 0.2, 0.3, 0.4, 0.5
         xy = rand(mvnorm(truth...), 100)'
 
-        cost = UnbinnedNLL(xy, model, model_grad=numerical_model_gradient(model))
+        cost = UnbinnedNLL(xy, model, grad=numerical_model_gradient(model))
         m = Minuit(cost, truth, grad=use_grad)
         m.limits["σx"] = (0, Inf)
         m.limits["σy"] = (0, Inf)

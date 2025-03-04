@@ -18,6 +18,7 @@ FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
 
 [extensions]
 Minuit2PlotsExt = ["Plots", "FHist"]
+Minuit2FHistExt = ["FHist"]
 
 [compat]
 CxxWrap = "0.16"

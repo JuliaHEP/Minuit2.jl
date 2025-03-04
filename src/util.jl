@@ -148,7 +148,7 @@ function _set(::ParamView, ::Int, value)
 end
 eltype(::ParamView) = Param
 
-function show(io::IO, p::Param)
+function Base.show(io::IO, p::Param)
     print(io, "Parameter $(p.parameter.number): $(p.parameter.name) = $(p.parameter.value) ± $(p.parameter.error)")
     if p.parameter.has_lower_limit || p.parameter.has_upper_limit
         print(io, " [$(p.parameter.lower_limit), $(p.parameter.upper_limit)]")
@@ -163,7 +163,7 @@ function show(io::IO, p::Param)
         print(io, " Minos: $(p.minos.lower) $(p.minos.upper)")
     end
 end
-function show(io::IO, view::ParamView)
+function Base.show(io::IO, view::ParamView)
     header = [" ", "Name", "Value", "Hesse Error",  "Minos-", "Minos+", "Limit-", "Limit+", "Fixed", "Const"]
     number = [p.number for p in view]
     names = [p.name for p in view]
@@ -198,6 +198,10 @@ function getproperty(m::Minuit, name::Symbol)
         return Edm(m.fmin)
     elseif name == :nfcn
         return NFcn(m.fmin)
+    elseif name == :ngrad
+        return m.fcn.ngrad
+    elseif name == :ndof
+        return ndof(m)
     elseif name == :niter
         return NIter(m.fmin)
     elseif name == :up
@@ -237,9 +241,18 @@ function getproperty(m::Minuit, name::Symbol)
     end
 end
 
-function show(io::IO, f::FunctionMinimum)
+function Base.show(io::IO, f::FunctionMinimum, m::Minuit=nothing)
+    # additional info not in FunctionMinimum
+    fval = string(round(f.fval, digits=3))
+    nfcn = string(f.nfcn)
+    if !isnothing(m)
+        rc = reduced_chi2(m)
+        !isnan(rc) && (fval = "$fval χ²/ndof=$(round(rc,digits=3))")
+        m.ngrad > 0 && (nfcn = "nfcn=$nfcn ngrad=$(m.ngrad)")
+    end
+
     data1 = ["FCN"        "Method"     "Ncalls"   "Iterations" "Up";
-    f.fval       " "      f.nfcn     f.niter     f.up;
+    fval       ifelse(isnothing(m), " ", m.method)     nfcn     f.niter     f.up;
     "Valid Min."     "Valid Param."	      "Above EDM"           "Call limit"              "Edm";
     f.is_valid	     f.has_valid_parameters  f.is_above_max_edm	f.has_reached_call_limit  f.edm;
     "Hesse failed"	 "Has cov."	          "Accurate"	        "Pos. def."               "Forced";
@@ -252,7 +265,7 @@ function Base.show(io::IO, m::Minuit)
         print(io, "Minuit(FCN = $(m.funcname), X0 = $(m.x0), Method = $(m.method))")
     else
         if !isnothing(m.fmin)
-            show(io, m.fmin)
+            show(io, m.fmin, m)
         end
         show(io, m.parameters)
         if m.has_covariance
