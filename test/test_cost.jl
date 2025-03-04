@@ -91,16 +91,18 @@ using FHist
 
     end
 
-    @testset "BinnedNLL$(glabel(use_grad))" for use_grad in (false,)
+    @testset "BinnedNLL$(glabel(use_grad))_$use_pdf" for use_grad in (false, true), use_pdf in (:none, :approximate)
 
+        @show use_grad, use_pdf
         nx, xe , (μ, σ)= binned()
-        cost = BinnedNLL(nx, xe, _cdf, grad=numerical_model_gradient(_cdf))
+        model = use_pdf == :none ? _cdf : _pdf
+        cost = BinnedNLL(nx, xe, model, grad=numerical_model_gradient(model), use_pdf=use_pdf)
         @test cost.ndata == length(nx)
     
         if use_grad
             ref = numerical_cost_gradient(cost)
-            @test grad(cost, [μ, σ]) ≈ ref(μ, σ)
-            @test grad(cost, [-1., 3.]) ≈ ref(-1., 3.)
+            @test grad(cost, [μ, σ])' ≈ ref(μ, σ)
+            @test grad(cost, [-1., 3.])' ≈ ref(-1., 3.)
         end
 
         m = Minuit(cost, μ=0, σ=1, grad=use_grad)
@@ -110,7 +112,7 @@ using FHist
         # binning loses information compared to unbinned case
         @test m.values ≈ [μ,σ] atol=0.15
         @test m.errors["μ"] ≈ √sum(nx)/sum(nx) atol=0.05
-        #@test m.ndof == length(nx) - 2
+        @test m.ndof == length(nx) - 2
 
         if use_grad
             @test m.fcn.ngrad > 0
