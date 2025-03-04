@@ -444,6 +444,8 @@ function getproperty(cost::LeastSquares, sym::Symbol)
         return errordef(cost)
     elseif sym == :npar
         return npar(cost)
+    elseif sym == :ndata
+        return ndata(cost)
     elseif sym == :x
         return @view cost.data[:,1:cost.ndim]
     elseif sym == :y
@@ -511,4 +513,4 @@ function grad(cost::LeastSquares, args)
     return cost.cost_grad(y, ye, ym, ymg)
 end
 has_grad(cost::LeastSquares) = cost.cost_grad !== nothing && cost.model_grad !== nothing
-ndata(cost::LeastSquares) = size(cost.data, 1)
+ndata(cost::LeastSquares) = Base.size(cost.data, 1)

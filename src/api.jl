@@ -339,7 +339,7 @@ end
 
 function ndof(m::Minuit)
     if m.cost === nothing
-        return
+        return Inf
     else
         return m.cost.ndata - (m.npar - sum(m.fixed))
     end
