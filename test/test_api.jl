@@ -194,5 +194,14 @@
         @test all(ok)
     end
 
+    @testset "ShowFunctions" begin
+        m = Minuit(sphere, [1.0, 1.0, 1.0], names=["x", "y", "z"])
+        migrad!(m)
+        minos!(m)
+        @test show(devnull, m) === nothing
+        @test show(devnull, m.fmin) === nothing
+        @test show(devnull, m.parameters) === nothing
+        @test show(devnull, m.minos) === nothing
+    end
 
 end

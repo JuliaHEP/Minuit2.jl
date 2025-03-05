@@ -92,8 +92,6 @@ using FHist
     end
 
     @testset "BinnedNLL$(glabel(use_grad))_$use_pdf" for use_grad in (false, true), use_pdf in (:none, :approximate)
-
-        @show use_grad, use_pdf
         nx, xe , (μ, σ)= binned()
         model = use_pdf == :none ? _cdf : _pdf
         cost = BinnedNLL(nx, xe, model, grad=numerical_model_gradient(model), use_pdf=use_pdf)

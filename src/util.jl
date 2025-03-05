@@ -260,7 +260,7 @@ function setproperty!(m::Minuit, name::Symbol, value)
     end
 end
 
-function Base.show(io::IO, f::FunctionMinimum, m::Minuit=nothing)
+function Base.show(io::IO, f::FunctionMinimum, m=nothing)
     # additional info not in FunctionMinimum
     fval = string(round(f.fval, digits=3))
     nfcn = string(f.nfcn)
@@ -271,8 +271,8 @@ function Base.show(io::IO, f::FunctionMinimum, m::Minuit=nothing)
         m.method == :scan && (nfcn = "nfcn=$(m.nfcn)")
     end
 
-    data1 = ["FCN"        "Method"     "Ncalls"   "Iterations" "Up";
-    fval       ifelse(isnothing(m), " ", m.method)     nfcn     f.niter     f.up;
+    data1 = ["FCN"        "Method"       "Ncalls"   "Iterations" "Up";
+    fval isnothing(m) ? " " : m.method    nfcn       f.niter     f.up;
     "Valid Min."     "Valid Param."	      "Above EDM"           "Call limit"              "Edm";
     f.is_valid	     f.has_valid_parameters  f.is_above_max_edm	f.has_reached_call_limit  f.edm;
     "Hesse failed"	 "Has cov."	          "Accurate"	        "Pos. def."               "Forced";
