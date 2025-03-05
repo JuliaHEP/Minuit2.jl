@@ -5,7 +5,7 @@ using Distributions
 
 import Base: values, show
 
-export FCN, Minuit, migrad!, hesse!, matrix, minos!, contour, mncontour, profile, mnprofile
+export FCN, Minuit, migrad!, hesse!, matrix, minos!, simplex!, scan!, contour, mncontour, profile, mnprofile
 
 """
     Minuit structure
@@ -375,6 +375,7 @@ function migrad!(m::Minuit, strategy=1)
     min = migrad(0, m.tolerance)   # calls the operator () to do the minimization
     #---Update the Minuit object with the results---------------------------------------------------
     m.app = migrad
+    m.method = :migrad
     m.fmin = min
     m.mino = nothing
     m.strategy = strategy
@@ -386,6 +387,56 @@ function edm_goal(m::Minuit; migrad_factor=false)
     edm_goal = max( m.tolerance * Up(m.fcn), 4 * sqrt(eps()))
     migrad_factor && (edm_goal *= 2e-3)
     edm_goal
+end
+
+"""
+    simplex!(m::Minuit, strategy=1)
+
+Run Simplex minimization.
+
+## Parameters
+- `m::Minuit` : The Minuit object to minimize.
+- `strategy::Int` : The minimization strategy. The default value is 1, which is
+    the recommended value for most cases. The value 0 is faster, but less
+    reliable. The value 2 is slower, but more reliable. The value 3 or higher is slower,
+    but even more reliable.
+"""
+function simplex!(m::Minuit, strategy=1)
+    simplex = MnSimplex(m.fcn, m.last_state,  MnStrategy(strategy))
+    min = simplex(0, m.tolerance)
+    m.app = simplex
+    m.method = :simplex
+    m.fmin = min
+    m.mino = nothing
+    m.last_state = UserState(min)[]
+    return m
+end
+
+
+function scan!(m::Minuit, maxfcn = 0, strategy=1)
+    if (maxfcn == 0)
+        maxfcn = 200 + 100 * m.npar + 5 * m.npar^2
+    end
+    npar = m.npar - sum(m.fixed)
+    npoints = maxfcn ^(1/npar) |> round |> Int
+    ranges = [ m.fixed[p] ? range(m.values[p],1) : range(m.limits[p]..., npoints) for p in 1:m.npar ]
+    hypercube = Iterators.product(ranges...)
+    fmin, xmin = Inf, nothing
+    for x in hypercube
+        f = m.fcn(collect(x))
+        if f < fmin
+            fmin, xmin = f, x
+        end
+    end
+    m.values = xmin
+    scan = MnScan(m.fcn,  m.last_state,  MnStrategy(strategy))
+    min = scan(0, m.tolerance)
+    m.app = scan
+    m.method = :scan
+    m.fmin = min
+    m.mino = nothing
+    m.last_state = UserState(min)[]
+    return m
 end
 
 """

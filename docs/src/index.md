@@ -71,6 +71,24 @@ julia> ex, ey = m.errors
 [1.0037197729944198, 2.009856810740231]
 ```
 
+## Examples
+Some notebooks are provided as examples. They are located in directory `examples`. They can be run using Julia to launch the notebook or jupyterlab. 
+
+```
+julia --project=Minuit2.jl/examples
+
+julia> ]instantiate
+julia> installkernel("Julia", env=Dict("JULIA_PROJECT" => "@."))
+julia> jupyterlab(dir="Minuit2.jl/examples")
+```
+
+### introduction.ipynb
+Basic introduction to minimization with Minuit using simple Julia functions and exercising the plotting capabilities. 
+
+### costfunction.ipynb
+Introduction of the provided cost functions for a typical HEP minimization problem. 
+
+
 ## Tests
 Unit tests can be run with `julia --project=. test/runtests.jl`
 

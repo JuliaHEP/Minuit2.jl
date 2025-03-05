@@ -23,6 +23,11 @@ function setindex!(view::AbstractView, value, key)
             _set(view, k, value[i])
         end
         return
+    elseif key isa Colon
+        for k in 1:length(view)
+            _set(view, k, value[k])
+        end
+        return
     end
     ipar, _ = keypair(view.minuit, key)
     _set(view, ipar, value)
@@ -197,7 +202,7 @@ function getproperty(m::Minuit, name::Symbol)
     elseif name == :edm
         return Edm(m.fmin)
     elseif name == :nfcn
-        return NFcn(m.fmin)
+        return m.fcn.nfcn
     elseif name == :ngrad
         return m.fcn.ngrad
     elseif name == :ndof
@@ -241,6 +246,20 @@ function getproperty(m::Minuit, name::Symbol)
     end
 end
 
+function setproperty!(m::Minuit, name::Symbol, value)
+    if name == :values
+        ValueView(m)[:] = value
+    elseif name == :errors
+        ErrorView(m)[:] = value
+    elseif name == :fixed
+        FixedView(m)[:] = value
+    elseif name == :limits
+        LimitView(m)[:] = value
+    else
+        setfield!(m, name, value)
+    end
+end
+
 function Base.show(io::IO, f::FunctionMinimum, m::Minuit=nothing)
     # additional info not in FunctionMinimum
     fval = string(round(f.fval, digits=3))
@@ -249,6 +268,7 @@ function Base.show(io::IO, f::FunctionMinimum, m::Minuit=nothing)
         rc = reduced_chi2(m)
         !isnan(rc) && (fval = "$fval χ²/ndof=$(round(rc,digits=3))")
         m.ngrad > 0 && (nfcn = "nfcn=$nfcn ngrad=$(m.ngrad)")
+        m.method == :scan && (nfcn = "nfcn=$(m.nfcn)")
     end
 
     data1 = ["FCN"        "Method"     "Ncalls"   "Iterations" "Up";
