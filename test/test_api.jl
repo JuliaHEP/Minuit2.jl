@@ -91,6 +91,20 @@
         @test m.niter > 0
         @test m.values ≈ [1.0, 1.0] atol=2e-2
         @test m.errors ≈ [1.0, 2.0] atol=2e-2
+
+        # Check simplex interface
+        simplex!(m)
+        @test m.is_valid
+        @test m.values ≈ [1.0, 1.0] atol=2e-2
+
+        # Check scan interface
+        m = Minuit(rosenbrock, [0.0, 0.0])
+        m.limits = [(-1, 1), (-1, 1)]
+        scan!(m)
+        @test m.is_valid
+        @test m.values ≈ [1.0, 1.0] atol=2e-2
+
+
     end
 
     @testset "Minuit with gradient" begin
@@ -180,5 +194,14 @@
         @test all(ok)
     end
 
+    @testset "ShowFunctions" begin
+        m = Minuit(sphere, [1.0, 1.0, 1.0], names=["x", "y", "z"])
+        migrad!(m)
+        minos!(m)
+        @test show(devnull, m) === nothing
+        @test show(devnull, m.fmin) === nothing
+        @test show(devnull, m.parameters) === nothing
+        @test show(devnull, m.minos) === nothing
+    end
 
 end

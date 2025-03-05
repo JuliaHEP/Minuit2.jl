@@ -88,7 +88,7 @@ cost = UnbinnedNLL(xmix, my_pdf)
 # The `Minuit` object is created using the cost function and the initial values limits for the
 # parameters. The `migrad!`function is called to minimize the cost function. The results are then
 # displayed.
-m = Minuit(cost, ζ=0.5, μ=1, σ=0.5, τ=1,
+m = Minuit(cost, ζ=0.5, μ=1., σ=0.5, τ=1.,
                  limit_ζ=(0, 1), limit_μ=(0, 2), limit_σ=(0, Inf), limit_τ=(0, Inf))
 migrad!(m)
 
@@ -144,7 +144,7 @@ visualize(m)
 my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), rng...),x) + (1 - ζ) * pdf(truncated(Exponential(τ), rng...), x)
 
 c = BinnedNLL(bincounts(h), binedges(h), my_pdf, use_pdf=:approximate)
-m = Minuit(c, ζ=0.4, μ=0, σ=0.2, τ=2.0, limit_ζ=(0, 1), limit_σ=(0, Inf), limit_τ=(0, Inf))
+m = Minuit(c, ζ=0.4, μ=0., σ=0.2, τ=2.0, limit_ζ=(0, 1), limit_σ=(0, Inf), limit_τ=(0, Inf))
 migrad!(m)
 
 # visualize the results
@@ -157,7 +157,7 @@ my_pdf2(xy, μ, σ, τ) = pdf(Normal(μ, σ),xy[1]) * pdf(Exponential(τ), xy[2]
 
 h2 = Hist2D((xdata, ydata), nbins=(20, 20))
 c = BinnedNLL(bincounts(h2), binedges(h2), my_pdf2, use_pdf=:approximate)
-m = Minuit(c, ζ=0.4, μ=1, σ=2, τ=2, limit_σ=(0, Inf), limit_τ=(0, Inf))
+m = Minuit(c, ζ=0.4, μ=1., σ=2., τ=2., limit_σ=(0, Inf), limit_τ=(0, Inf))
 migrad!(m)
 
 # ## Least-squares fits

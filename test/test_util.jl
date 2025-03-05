@@ -18,6 +18,11 @@
         @test v["y"] == 2.0
         @test v["z"] == 3.0
 
+        v[:] = (3, 2, 1)
+        @test v[1] == 3.0
+        @test v[2] == 2.0
+        @test v[3] == 1.0
+           
     end
     @testset "ErrorView" begin
         m = Minuit((x,y,z) -> 0. ,[1.0, 2.2, 3.3])   # Fake Minuit object
@@ -97,6 +102,11 @@
         @test v[1] == (-Inf, Inf) # The limit is removed
         @test m.fixed[1] == true
         @test m.values[1] == 1.0
+
+        m.limits = [(0.0, 1.0), (0.0, 2.0), (0.0, 3.0)]
+        @test v[1] == (0.0, 1.0)
+        @test v[2] == (0.0, 2.0)
+        @test v[3] == (0.0, 3.0)    
 
     end
 
