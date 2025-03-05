@@ -1,7 +1,7 @@
 
 # Release Notes
 
-## 0.2.x 
+## 0.2.1 
 ### Fixes
 - Keyword argument for gradient in cost functions is `grad`
 - Fixed convergence for BinnedNLL with gradient
