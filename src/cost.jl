@@ -5,7 +5,7 @@
 #-------------------------------------------------------------------------------------------
 import IterTools
 abstract type CostFunction end
-import Base: getproperty, setproperty!, propertynames, show
+import Base: getproperty, setproperty!, propertynames, show, getindex, length, size
 export LeastSquares, Constant, CostFunction, UnbinnedCostFunction, BinnedCostFunction,
        BaseCost, UnbinnedNLL, BinnedNLL, ExtendedUnbinnedNLL, ExtendedBinnedNLL
 export value, grad, has_grad
@@ -171,6 +171,22 @@ function Base.show(io::IO, cost::CostFunction)
     print(io, "$(typeof(cost)) cost function of \"$modelname\" with parameters $(cost.parameters)")
 end
 
+function getproperty(cost::CostFunction, sym::Symbol)
+    if hasproperty(getfield(cost, :base), sym)
+        return getproperty(getfield(cost, :base), sym)
+    elseif sym == :npar
+        return length(cost.parameters)
+    elseif sym == :errordef
+        return errordef(cost)
+    elseif sym == :items
+        return [cost[i] for i in 1:length(cost)]
+    elseif sym == :ndata
+        return ndata(cost)
+    else
+        return getfield(cost, sym)
+    end
+end
+
 #---Abstract Binned cost function------------------------------------------------------------------
 abstract type BinnedCostFunction <: CostFunction end
 has_grad(cost::BinnedCostFunction) = cost.model_grad !== nothing
@@ -237,10 +253,56 @@ end
 Constant cost function with fixed value.
 """
 Constant(value::Float64; verbose::Int=0) = Constant(BaseCost(verbose, []), value)
-value(cost::Constant) = cost.value
-grad(cost::Constant) = 0.0
+value(cost::Constant, args=[]) = cost.value
+grad(cost::Constant, args=[]) = 0.0
 has_grad(cost::Constant) = true
 ndata(cost::Constant) = 0
+Base.show(io::IO, cost::Constant) = print(io, "Constant cost function with value $(cost.value)")
+
+
+#---CostSum cost function-------------------------------------------------------------------------
+mutable struct CostSum <: CostFunction
+    base::BaseCost
+    costs::Tuple
+    argsmapping::Vector{Vector{Int}}
+end
+
+"""
+    CostSum(costs::CostFunction...; verbose::Int=0)
+"""
+function CostSum(costs::CostFunction...; verbose::Int=0)
+    items = CostFunction[]
+    for item in costs
+        if item isa CostSum
+            append!(items, item.items)
+        elseif item isa Real
+            push!(items, Constant(item))
+        else
+            push!(items, item)
+        end
+    end
+    parameters = unique(vcat([cost.parameters for cost in items]...))
+    argsmapping = [[findfirst(p -> p == param, parameters) for param in c.parameters] for c in items]
+    CostSum(BaseCost(verbose, parameters), tuple(items...), argsmapping)
+end
+
+has_grad(cost::CostSum) = all(has_grad(c) for c in cost.costs)
+ndata(cost::CostSum) = sum(c.ndata for c in cost.costs)
+length(cost::CostSum) = length(cost.costs)
+getindex(cost::CostSum, key) = cost.costs[key]
+Base.:+(costs::CostFunction...) = CostSum(costs...)
+
+function value(cost::CostSum, args)
+    sum(value.(cost.costs, [args[m] for m in cost.argsmapping]))
+end
+
+function grad(cost::CostSum, args)
+    r = zeros(cost.npar)
+    for (c, m) in zip(cost.costs, cost.argsmapping)
+        r[m] .+= grad(c, args[m])
+    end
+    return r
+end
 
 #---UnbinnedNLL cost function---------------------------------------------------------------------
 mutable struct UnbinnedNLL <: UnbinnedCostFunction
@@ -475,6 +537,7 @@ function value(cost::BinnedNLL, args)
 end
 
 function grad(cost::BinnedNLL, args)
+    isnothing(cost.model_grad) && throw(ArgumentError("no gradient available"))
     p = cost.pred(cost, args) * cost.entries   # scale probabilities with number entries
     gf = _pred_grad(cost, args) * cost.entries # scale gradients with number entries
     multinomial_chi2_grad(cost.bincounts, p, gf)
@@ -560,6 +623,7 @@ function value(cost::ExtendedBinnedNLL, args)
 end
 
 function grad(cost::ExtendedBinnedNLL, args)
+    isnothing(cost.model_grad) && throw(ArgumentError("no gradient available"))
     mu = cost.pred(cost, args)
     gmu = _pred_grad(cost, args)
     poisson_chi2_grad(cost.bincounts, mu, gmu)
@@ -613,7 +677,7 @@ a system with attractive forces. The loss function can be modified to make the
 fit robust against outliers.
 """
 function LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Function; 
-                     loss=:linear, verbose=0, model_grad=nothing, names=(), mask=nothing)
+                     loss=:linear, verbose=0, grad=nothing, names=(), mask=nothing)
     #---Check in x is a vector of tuples-----------------------------------------------------------
     if ndims(x) == 1 && eltype(x) <: Tuple
         x = reduce(vcat, [[t...]' for t in x])
@@ -629,7 +693,7 @@ function LeastSquares(x::AbstractArray, y::AbstractVector, yerror, model::Functi
     isnothing(mask) || length(mask) == len || throw(DimensionMismatch("length of x and mask do not match"))
     data = hcat(x, y, yerror)
     params = model_parameters(model, names)
-    c =  LeastSquares(BaseCost(verbose, params), data, mask, loss, chi2, chi2_grad, model, model_grad, ndim)
+    c =  LeastSquares(BaseCost(verbose, params), data, mask, loss, chi2, chi2_grad, model, grad, ndim)
     c.loss = loss
     return c
 end

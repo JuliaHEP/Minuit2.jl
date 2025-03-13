@@ -215,4 +215,111 @@ using FHist
             @test m.fcn.ngrad == 0
         end
     end
+
+    @testset "CostSum$(glabel(use_grad))" for use_grad in (false, true)
+        use_grad = false
+
+        model1(x, a) = a + x
+        grad1(x, a) = 1.
+        model2(x, b, a) = a + b * x
+        grad2(x, b, a) = [x, 1.]
+        model3(x, c) = c
+        grad3(x, c) = 1.
+
+        lsq1 = LeastSquares([1.], [2.], 3., model1, grad=grad1)
+        @test lsq1.parameters == ["a"]
+        if use_grad
+            grad(lsq1, 2.) ≈ numerical_cost_gradient(lsq1)(2.)[1]
+        end
+
+        lsq2 = LeastSquares([1.], [3.], 4, model2, grad=grad2)
+        @test lsq2.parameters == ["b", "a"]
+        if use_grad
+            grad(lsq2, (2., 3.)) ≈ numerical_cost_gradient(lsq2)(2., 3.)
+        end
+
+        lsq3 = LeastSquares([1.], [1.], 1, model3, grad=grad3)
+        @test lsq3.parameters == ["c"]
+        if use_grad
+            grad(lsq3, 4.) ≈ numerical_cost_gradient(lsq3)(4.)[1]
+        end
+
+        lsq12 = lsq1 + lsq2
+        @test lsq12.items == [lsq1, lsq2]
+        @test lsq12 isa Minuit2.CostSum
+        @test lsq1 isa LeastSquares
+        @test lsq2 isa LeastSquares
+        @test lsq12.parameters == ["a", "b"]
+        @test lsq12.ndata == 2
+        @test lsq12(1, 2) == lsq1(1) + lsq2(2, 1)
+
+        if use_grad
+            a = 2
+            b = 3
+            ref = zeros(2)
+            ref[1] += grad(lsq1, a)[1]
+            ref[[2,1]] += grad(lsq2, (b, a))
+            @test grad(lsq12, (a, b)) ≈ ref
+        end
+
+        lsq121 = lsq12 + lsq1
+        @test lsq121.items == [lsq1, lsq2, lsq1]
+        @test lsq121.parameters == ["a", "b"]
+        @test lsq121.ndata == 3
+        if use_grad
+            a = 2
+            b = 3
+            ref = zeros(2)
+            ref[1] += grad(lsq1, a)[1]
+            ref[[2,1]] += grad(lsq2, (b, a))
+            ref[1] += grad(lsq1, a)[1]
+            @test grad(lsq121, (a,b)) ≈ ref
+        end
+
+        lsq312 = lsq3 + lsq12
+        @test lsq312.items == [lsq3, lsq1, lsq2]
+        @test lsq312.parameters == ["c", "a", "b"]
+        @test lsq312.ndata == 3
+        if use_grad
+            a = 2
+            b = 3
+            c = 4
+            ref = zeros(3)
+            ref[1] += grad(lsq3, c)[1]
+            ref[2] += grad(lsq1, a)[1]
+            ref[[3, 2]] += grad(lsq2, (b, a))
+            @test grad(lsq312, (c, a, b)) ≈ ref
+        end
+        lsq31212 = lsq312 + lsq12
+        @test lsq31212.items == [lsq3, lsq1, lsq2, lsq1, lsq2]
+        if use_grad
+            a = 2
+            b = 3
+            c = 4
+            ref = zeros(3)
+            ref[:] += grad(lsq312, (c, a, b))
+            ref[2:end] += grad(lsq12, (a, b))
+            @test grad(lsq31212, (c, a, b)) ≈ ref
+        end
+
+        lsq31212 += lsq1
+        @test lsq31212.items == [lsq3, lsq1, lsq2, lsq1, lsq2, lsq1]
+        @test lsq31212.parameters == ["c", "a", "b"]
+        @test lsq31212.ndata == 6
+
+        m = Minuit(lsq12, a=0, b=0, grad=use_grad)
+        migrad!(m)
+        @test m.names == ["a", "b"]
+        @test m.values ≈ [1, 2] atol=0.005
+        @test m.errors ≈ [3, 5] atol=0.005
+        @test m.covariance(1,1) ≈ 9
+        @test m.covariance(1,2) ≈ -9
+        @test m.covariance(2,2) ≈ 25
+
+        if use_grad
+            @test m.ngrad > 0
+        else
+            @test m.ngrad == 0
+        end
+    end
 end

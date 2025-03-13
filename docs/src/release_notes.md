@@ -8,6 +8,8 @@
 - Extended cost functions `ExtendedBinnedNLL` and `ExtendedUnbinnedNLL`.
   - Added examples in costfunctions example
   - Added unit tests
+- Added `CostSum` to combine cost functions
+  - Added unit test
 
 ## 0.2.1 (5-03-2025) 
 ### Fixes
