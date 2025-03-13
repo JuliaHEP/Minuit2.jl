@@ -98,27 +98,36 @@ function Minuit2.visualize(m::Minuit; nbins=50, kwargs...)
             plt = plot!(plt, x, yt; label="Fit")
         end
         return plt
-    elseif cost isa UnbinnedNLL
+    elseif cost isa UnbinnedCostFunction
         h = Hist1D(cost.data, nbins=nbins)
         x = bincenters(h)
         y = bincounts(h)
         dy = sqrt.(y)
         plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
         if m.is_valid
-            scale = prod(Base.size(cost.data))*(x[2]-x[1])
             pars = m.values
-            plot!(plt, x -> cost.model(x, pars...)*scale; label="Fit")
+            if cost isa UnbinnedNLL
+                scale = prod(Base.size(cost.data))*(x[2]-x[1])
+                plot!(plt, x -> cost.model(x, pars...)*scale; label="Fit")
+            else
+                scale = (x[2]-x[1])
+                plot!(plt, x -> cost.model(x, pars...)[2]*scale; label="Fit")
+            end                
         end
         return plt
-    elseif cost isa BinnedNLL
+    elseif cost isa BinnedCostFunction
         x = [0.5*(cost.binedges[i] + cost.binedges[i+1]) for i in 1:length(cost.binedges)-1]
         dx = (x[2]-x[1])/2
         y = cost.bincounts
         dy = sqrt.(y)
         plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
         if m.is_valid
-            scale = sum(cost.bincounts)
             pars = m.values
+            if cost isa BinnedNLL
+                scale = sum(cost.bincounts)
+            else
+                scale = 1
+            end 
             if cost.use_pdf == :approximate
                 f = x -> cost.model(x, pars...)*scale*2dx
             else

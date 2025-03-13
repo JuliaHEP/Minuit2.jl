@@ -32,6 +32,11 @@ function setindex!(view::AbstractView, value, key)
     ipar, _ = keypair(view.minuit, key)
     _set(view, ipar, value)
 end
+function setindex!(view::AbstractView, value, key...)
+    for k in key
+        setindex!(view, value, k)
+    end
+end
 length(view::AbstractView) = view.minuit.npar
 lastindex(view::AbstractView) = view.minuit.npar
 iterate(view::AbstractView, state=1) = state > length(view) ? nothing : (view[state], state + 1)

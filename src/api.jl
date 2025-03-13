@@ -154,7 +154,7 @@ function FCN(cost::CostFunction, grad=true)
             quote
                 function $fcn(obj::Ptr{Cvoid}, args)::Float64
                     costfunc = unsafe_pointer_to_objref(obj)::$COST
-                    Minuit2.value(costfunc, args)
+                    Minuit2.cost_value(costfunc, args)
                 end
                 function $gra(obj::Ptr{Cvoid}, grad, args)::Nothing
                     costfunc = unsafe_pointer_to_objref(obj)::$COST
@@ -179,7 +179,7 @@ function FCN(cost::CostFunction, grad=true)
             quote
                 function $fcn(obj::Ptr{Cvoid}, args)::Float64
                     costfunc = unsafe_pointer_to_objref(obj)::$COST
-                    Minuit2.value(costfunc, args)
+                    Minuit2.cost_value(costfunc, args)
                 end
             end )
         sf = eval( quote

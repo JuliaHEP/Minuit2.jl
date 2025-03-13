@@ -1,7 +1,15 @@
 
 # Release Notes
 
-## 0.2.1 
+## 0.2.*
+### Fixes
+- 
+### Additions
+- Extended cost functions `ExtendedBinnedNLL` and `ExtendedUnbinnedNLL`.
+  - Added examples in costfunctions example
+  - Added unit tests
+
+## 0.2.1 (5-03-2025) 
 ### Fixes
 - Keyword argument for gradient in cost functions is `grad`
 - Fixed convergence for BinnedNLL with gradient

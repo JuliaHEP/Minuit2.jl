@@ -27,6 +27,12 @@ using FHist
         (x, args...) -> finite_difference_gradient(p -> fcn(x, p...), collect(args))
     end
 
+    function numerical_extended_model_gradient(fcn)
+        fint = (x, args...) -> finite_difference_gradient(p -> fcn(x, p...)[1], collect(args))
+        f = (x, args...) -> finite_difference_gradient(p -> fcn(x, p...)[2], collect(args))
+        (x, args...) -> (fint.(x, args...), f.(x, args...))
+    end
+
     function mvnorm(μx, μy, σx, σy, ρ)
         C = [σx^2 ρ*σx*σy; ρ*σx*σy σy^2]
         return MvNormal([μx, μy], C)
@@ -118,6 +124,95 @@ using FHist
             @test m.fcn.ngrad == 0
         end
     end
+
+    @testset "ExtendedUnbinnedNLL_names" begin
+        
+        x, (μ, σ, n) = unbinned()
+        cost = ExtendedUnbinnedNLL(x, (x, par...) -> (par[1], par[1] * _pdf(x, par[2:end]...)), names=("n", "μ", "σ"))
+        @test cost.ndata == Inf
+
+        m = Minuit(cost, n=n, μ=0, σ=1)
+        m.limits["σ"] = (0, Inf)
+        m.limits["n"] = (0, Inf)
+
+        migrad!(m)
+        @test m.is_valid
+        @test m.values ≈ [n, μ, σ] atol=0.05
+
+    end
+
+    @testset "ExtendedUnbinnedNLL$model$(glabel(use_grad))" for model in (_pdf, _logpdf,), use_grad in (false, true)
+
+        x, (μ, σ, n) = unbinned()
+
+        is_log = model == _logpdf
+        function density(x, n, μ, σ)
+            if is_log
+                return n, log.(n) .+ model(x, μ, σ)
+            else
+                return n, n * model(x, μ, σ)
+            end
+        end
+
+        cost = ExtendedUnbinnedNLL(x, density, log=is_log, grad=numerical_extended_model_gradient(density))
+        @test cost.errordef == 0.5
+        @test cost.npar == 3
+        @test cost.ndata == Inf
+        
+        if model ==_logpdf
+            fint, f = density(x, n, μ, σ)
+            @test cost(n, μ, σ) ≈ 2.0 * (fint - sum(f))
+        end
+        if use_grad
+            ref = numerical_cost_gradient(cost)
+            @test grad(cost, [1000., 1., 2.]) ≈ ref(1000., 1., 2.)
+            @test grad(cost, [1000, -1., 3.]) ≈ ref(1000., -1., 3.)
+        end
+
+        m = Minuit(cost, n=length(x), μ=0, σ=1, grad=use_grad)
+        m.limits["σ"] = (0, Inf)
+        m.limits["n"] = (0, Inf)
+        migrad!(m)
+
+        @test m.is_valid
+        @test m.values ≈ [length(x), μ, σ] atol=0.005
+        @test m.errors["μ"] ≈ √n/n atol=0.05
+
+        if use_grad
+            @test m.fcn.ngrad > 0
+        else
+            @test m.fcn.ngrad == 0
+        end
+            
+    end
+
+
+    @testset "ExtendedBinnedNLL$(glabel(use_grad))" for use_grad in (false, true)
+        nx, xe , (μ, σ)= binned()
+        model = (nx, n, μ, σ) -> n .* _cdf(nx, μ, σ)
+
+        cost = ExtendedBinnedNLL(nx, xe, model, grad=numerical_model_gradient(model))
+        @test cost.ndata == length(nx)
+
+        if use_grad
+            ref = numerical_cost_gradient(cost)
+            @test grad(cost, [1000., μ, σ])' ≈ ref(1000., μ, σ)
+            @test grad(cost, [500., -1., 3.])' ≈ ref(500., -1., 3.)
+        end
+
+        m = Minuit(cost, nx=nx, n=length(nx), μ=0, σ=1, grad=use_grad)
+        m.limits["σ"] = (0, Inf)
+        m.limits["n"] = (0, Inf)
+        migrad!(m)
+        @test m.is_valid
+        @test m.values ≈ [1000., μ, σ] rtol=0.2
+        @test m.errors["μ"] ≈ √sum(nx)/sum(nx) atol=0.05
+        @test m.ndof == length(nx) - 3
+
+        if use_grad
+            @test m.fcn.ngrad > 0
+        else
+            @test m.fcn.ngrad == 0
+        end
+    end
 end
-
-
