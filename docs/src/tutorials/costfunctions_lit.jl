@@ -277,7 +277,7 @@ heatmap(range(-1.,1.,100), range(-1.,1.,100), (x,y)->model2((x,y), m2.values...)
 scatter!(xy, zcolor=z)
 
 # Let's use the gradient in a multi-variate
-c2 = LeastSquares(xy, z, zerror, model2, model_grad=model2_grad)
+c2 = LeastSquares(xy, z, zerror, model2, grad=model2_grad)
 m2 = Minuit(c2, 0, 0, 0)
 migrad!(m2)
 
