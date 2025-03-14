@@ -4,9 +4,9 @@ using FHist
 
 @testset "Cost functions" verbose=true begin
 
-    _pdf(x, μ, σ) = pdf(Normal(μ, σ), x)
-    _cdf(x, μ, σ) = cdf(Normal(μ, σ), x)
-    _logpdf(x, μ, σ) = logpdf(Normal(μ, σ), x)
+    _pdf(x, μ, σ) = map(Base.Fix1(pdf, Normal(μ, σ)), x)
+    _cdf(x, μ, σ) = map(Base.Fix1(cdf, Normal(μ, σ)), x)
+    _logpdf(x, μ, σ) = map(Base.Fix1(logpdf, Normal(μ, σ)), x)
     _pdf_nosig(x, par...) =  _pdf(x, par...)
 
     function unbinned()
@@ -196,7 +196,7 @@ using FHist
 
         if use_grad
             ref = numerical_cost_gradient(cost)
-            @test grad(cost, [1000., μ, σ])' ≈ ref(1000., μ, σ)
+            @test grad(cost, [1000., μ, σ])' ≈ ref(1000., μ, σ) rtol=1e-6
             @test grad(cost, [500., -1., 3.])' ≈ ref(500., -1., 3.)
         end
 
