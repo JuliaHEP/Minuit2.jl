@@ -178,6 +178,8 @@ function getproperty(cost::CostFunction, sym::Symbol)
         return length(cost.parameters)
     elseif sym == :errordef
         return errordef(cost)
+    elseif sym == :ndim
+        return ndim(cost)
     elseif sym == :items
         return [cost[i] for i in 1:length(cost)]
     elseif sym == :ndata
@@ -288,6 +290,7 @@ end
 
 has_grad(cost::CostSum) = all(has_grad(c) for c in cost.costs)
 ndata(cost::CostSum) = sum(c.ndata for c in cost.costs)
+ndim(cost::CostSum) = maximum(c.ndim for c in cost.costs)
 length(cost::CostSum) = length(cost.costs)
 getindex(cost::CostSum, key) = cost.costs[key]
 Base.:+(costs::CostFunction...) = CostSum(costs...)

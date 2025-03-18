@@ -6,10 +6,13 @@
 - 
 ### Additions
 - Extended cost functions `ExtendedBinnedNLL` and `ExtendedUnbinnedNLL`.
-  - Added examples in costfunctions example
+  - Added examples in `costfunctions` example
   - Added unit tests
 - Added `CostSum` to combine cost functions
   - Added unit test
+  - Added `combined` tutorial
+- Extended Distributions with a Chebyshev polynomial distribution
+- Added `elapsed` time of the minuit printout
 
 ## 0.2.1 (5-03-2025) 
 ### Fixes
