@@ -2,24 +2,28 @@ using Minuit2
 using Distributions
 using FHist
 using Plots
+using Random
 
-rng = (0, 2)
-xdata = rand(Normal(1., 0.1), 1000)               # Normal and Exponential are from Distributions.jl
-ydata = rand(Exponential(1.), length(xdata))
-xmix = vcat(xdata, ydata)
-xmix = xmix[(rng[1] .< xmix .< rng[2])]
-h = Hist1D(xmix, nbins=20)                        # Hist1D is from FHist.jl
+Random.seed!(4321)
+const N = 1000
+const a, b = 0, 2                           # range of the data
+const μ, σ, τ, ζ = 1, 0.1, 1, 0.5           # true values of the parameters
+xdata = rand(Normal(μ, σ), N)               # Normal and Exponential are from Distributions.jl
+ydata = rand(Exponential(τ), N)
+xmix = vcat(xdata, ydata)                   # mix the data
+xmix = xmix[(a .< xmix .< b)]
+h = Hist1D(xmix, nbins=20)                  # Hist1D is from FHist.jl
 x = bincenters(h)
 y = bincounts(h)
 dy = sqrt.(y)
 # Plot the generated data
 plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
 
-h2 = Hist2D((xdata, ydata), binedges=(range(rng..., 21), range(0., maximum(ydata), 6)))
+h2 = Hist2D((xdata, ydata), binedges=(range(a, b, 21), range(0., maximum(ydata), 6)))
 plot(h2)
 scatter!(xdata, ydata, markersize=2, color=:white)
 
-my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), rng...),x) + (1 - ζ) * pdf(truncated(Exponential(τ), rng...), x)
+my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), a, b),x) + (1 - ζ) * pdf(truncated(Exponential(τ), a, b), x)
 
 cost = UnbinnedNLL(xmix, my_pdf)
 
@@ -31,6 +35,21 @@ visualize(m)
 
 minos!(m)
 
+draw_mncontour(m, "σ", "τ", cl=1:4)
+scatter!([m.values["σ"]], [m.values["τ"]], label="fit")
+scatter!([σ], [τ], label="true")
+
+draw_mnprofile(m, "σ")
+
+density(x, s, b, μ, σ, τ) = (s + b, s * pdf(truncated(Normal(μ, σ), a, b),x) + b * pdf(truncated(Exponential(τ), a, b), x))
+cost = ExtendedUnbinnedNLL(xmix, density)
+
+m = Minuit(cost; s=300, b=1500, μ=0., σ=0.2, τ=2)
+m.limits["s", "b", "σ", "τ"] = (0, Inf)
+migrad!(m)
+
+visualize(m)
+
 function my_logpdf(xy, μ, σ, τ)
     x, y = xy
     logpdf(Normal(μ, σ), x) + logpdf(Exponential(τ), y)
@@ -40,7 +59,7 @@ c = UnbinnedNLL(hcat(xdata, ydata), my_logpdf, log=true)
 m = Minuit(c, μ=1, σ=2, τ=2, limit_σ=(0,Inf), limit_τ=(0,Inf))
 migrad!(m)
 
-my_cdf(x, ζ, μ, σ, τ) = ζ * cdf(truncated(Normal(μ, σ), rng...),x) + (1 - ζ) * cdf(truncated(Exponential(τ), rng...), x)
+my_cdf(x, ζ, μ, σ, τ) = ζ * cdf(truncated(Normal(μ, σ), a, b),x) + (1 - ζ) * cdf(truncated(Exponential(τ), a, b), x)
 
 h = Hist1D(xmix, nbins=20)
 c = BinnedNLL(bincounts(h), binedges(h), my_cdf)
@@ -49,10 +68,19 @@ migrad!(m)
 
 visualize(m)
 
-my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), rng...),x) + (1 - ζ) * pdf(truncated(Exponential(τ), rng...), x)
+my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), a, b),x) + (1 - ζ) * pdf(truncated(Exponential(τ), a, b), x)
 
 c = BinnedNLL(bincounts(h), binedges(h), my_pdf, use_pdf=:approximate)
 m = Minuit(c, ζ=0.4, μ=0., σ=0.2, τ=2.0, limit_ζ=(0, 1), limit_σ=(0, Inf), limit_τ=(0, Inf))
+migrad!(m)
+
+visualize(m)
+
+integral(x, sig, bkg, μ, σ, τ) = sig * cdf(truncated(Normal(μ, σ), a, b),x) + bkg * cdf(truncated(Exponential(τ), a, b), x)
+
+cost = ExtendedBinnedNLL(bincounts(h), binedges(h), integral)
+m = Minuit(cost, sig=500, bkg=800, μ=0, σ=0.2, τ=2, strategy=2)
+m.limits["sig", "bkg", "σ", "τ"] = (0, Inf)
 migrad!(m)
 
 visualize(m)
@@ -113,7 +141,7 @@ migrad!(m2)
 heatmap(range(-1.,1.,100), range(-1.,1.,100), (x,y)->model2((x,y), m2.values...))
 scatter!(xy, zcolor=z)
 
-c2 = LeastSquares(xy, z, zerror, model2, model_grad=model2_grad)
+c2 = LeastSquares(xy, z, zerror, model2, grad=model2_grad)
 m2 = Minuit(c2, 0, 0, 0)
 migrad!(m2)
 

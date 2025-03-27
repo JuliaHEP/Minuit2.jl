@@ -29,16 +29,19 @@ using Minuit2
 using Distributions
 using FHist
 using Plots
+using Random
 
 # We generate our data by sampling from a Gaussian peak and from exponential background 
 # in the range 0 to 2. The original data is then binned. One can fit the original or the binned data.
-
-rng = (0, 2)
-xdata = rand(Normal(1., 0.1), 1000)               # Normal and Exponential are from Distributions.jl
-ydata = rand(Exponential(1.), length(xdata))
-xmix = vcat(xdata, ydata)
-xmix = xmix[(rng[1] .< xmix .< rng[2])]
-h = Hist1D(xmix, nbins=20)                        # Hist1D is from FHist.jl
+Random.seed!(4321)
+const N = 1000 
+const a, b = 0, 2                           # range of the data
+const μ, σ, τ, ζ = 1, 0.1, 1, 0.5           # true values of the parameters    
+xdata = rand(Normal(μ, σ), N)               # Normal and Exponential are from Distributions.jl
+ydata = rand(Exponential(τ), N)
+xmix = vcat(xdata, ydata)                   # mix the data
+xmix = xmix[(a .< xmix .< b)]
+h = Hist1D(xmix, nbins=20)                  # Hist1D is from FHist.jl
 x = bincenters(h)
 y = bincounts(h)
 dy = sqrt.(y)
@@ -49,7 +52,7 @@ plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
 # In this case, a Gaussian along axis 1 and independently an exponential along axis 2. 
 # In this case, the distributions are not restricted to some range in x and y.
 
-h2 = Hist2D((xdata, ydata), binedges=(range(rng..., 21), range(0., maximum(ydata), 6)))
+h2 = Hist2D((xdata, ydata), binedges=(range(a, b, 21), range(0., maximum(ydata), 6)))
 plot(h2)
 scatter!(xdata, ydata, markersize=2, color=:white)
 
@@ -80,7 +83,7 @@ scatter!(xdata, ydata, markersize=2, color=:white)
 # In addition, it can be beneficial to use $0 < \mu < 2$, but it is not required. We use the function 
 # `truncated` provided by the `Distributions` package,  which normalizes inside the data range (0, 2).
 
-my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), rng...),x) + (1 - ζ) * pdf(truncated(Exponential(τ), rng...), x)
+my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), a, b),x) + (1 - ζ) * pdf(truncated(Exponential(τ), a, b), x)
 
 cost = UnbinnedNLL(xmix, my_pdf)
 
@@ -97,6 +100,36 @@ visualize(m)
 
 # And finally, the `minos!` function can be used to calculate the errors on the parameters.
 minos!(m)
+
+# We can also see the contour choosing a pair of parameters
+draw_mncontour(m, "σ", "τ", cl=1:4)
+scatter!([m.values["σ"]], [m.values["τ"]], label="fit")
+scatter!([σ], [τ], label="true")
+
+# And the profile
+draw_mnprofile(m, "σ")
+
+# #### Extended UnbinnedNLL
+# An important variant of the unbinned NLL fit is described by [Roger Barlow, Nucl.Instrum.Meth.A 297 (1990) 496-506](https://inspirehep.net/literature/297773). 
+# Use this if both the shape and the integral of the density are of interest. 
+# In practice, this is often the case, for example, if you want to estimate a cross-section or yield.
+
+# The model in this case has to return the integral of the density and the density itself (which must be vectorized).
+# The parameters in this case are those already discussed in the previous section and in addition `s` (integral of the signal density), 
+# `b` (integral of the uniform density). The additional limits are:
+# - `s > 0`,
+# - `b > 0`
+
+# Compared to the previous case, we have one more parameter to fit.
+density(x, s, b, μ, σ, τ) = (s + b, s * pdf(truncated(Normal(μ, σ), a, b),x) + b * pdf(truncated(Exponential(τ), a, b), x))
+cost = ExtendedUnbinnedNLL(xmix, density) 
+
+m = Minuit(cost; s=300, b=1500, μ=0., σ=0.2, τ=2)
+m.limits["s", "b", "σ", "τ"] = (0, Inf)
+migrad!(m)
+
+# visualize the results
+visualize(m)
 
 # #### Multivariate fits
 # We can also fit a multivariate model to multivariate data. 
@@ -127,7 +160,7 @@ migrad!(m)
 # `pdf` over the bin range. In this example we use `Hist1D` from FHist.jl to create the histogram
 # and the `BinnedNLL` cost function. Other histogram types are also possible.
 
-my_cdf(x, ζ, μ, σ, τ) = ζ * cdf(truncated(Normal(μ, σ), rng...),x) + (1 - ζ) * cdf(truncated(Exponential(τ), rng...), x)
+my_cdf(x, ζ, μ, σ, τ) = ζ * cdf(truncated(Normal(μ, σ), a, b),x) + (1 - ζ) * cdf(truncated(Exponential(τ), a, b), x)
 
 h = Hist1D(xmix, nbins=20)
 c = BinnedNLL(bincounts(h), binedges(h), my_cdf)
@@ -141,13 +174,31 @@ visualize(m)
 # the `pdf` evaluated at the center of the bin. 
 # This can be done with `use_pdf=:approximate` when defining the BinnedNNL cost.
 
-my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), rng...),x) + (1 - ζ) * pdf(truncated(Exponential(τ), rng...), x)
+my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), a, b),x) + (1 - ζ) * pdf(truncated(Exponential(τ), a, b), x)
 
 c = BinnedNLL(bincounts(h), binedges(h), my_pdf, use_pdf=:approximate)
 m = Minuit(c, ζ=0.4, μ=0., σ=0.2, τ=2.0, limit_ζ=(0, 1), limit_σ=(0, Inf), limit_τ=(0, Inf))
 migrad!(m)
 
 # visualize the results
+visualize(m)
+
+# #### Extended BinnedNLL Fits
+# As in the unbinned case, the binned extended maximum-likelihood fit should be used when also 
+# the amplitudes of the pdfs are of interest.
+
+# Instead of a density, you need to provide the integrated density in this case (which must be vectorized).
+# There is no need to separately return the total integral of the density, 
+# like in the unbinned case. The parameters are the same as in the unbinned extended fit.
+
+integral(x, sig, bkg, μ, σ, τ) = sig * cdf(truncated(Normal(μ, σ), a, b),x) + bkg * cdf(truncated(Exponential(τ), a, b), x)
+
+cost = ExtendedBinnedNLL(bincounts(h), binedges(h), integral)
+m = Minuit(cost, sig=500, bkg=800, μ=0, σ=0.2, τ=2, strategy=2)
+m.limits["sig", "bkg", "σ", "τ"] = (0, Inf)
+migrad!(m)
+
+#
 visualize(m)
 
 # #### Multi-dimensional Binned fit
@@ -226,7 +277,7 @@ heatmap(range(-1.,1.,100), range(-1.,1.,100), (x,y)->model2((x,y), m2.values...)
 scatter!(xy, zcolor=z)
 
 # Let's use the gradient in a multi-variate
-c2 = LeastSquares(xy, z, zerror, model2, model_grad=model2_grad)
+c2 = LeastSquares(xy, z, zerror, model2, grad=model2_grad)
 m2 = Minuit(c2, 0, 0, 0)
 migrad!(m2)
 
