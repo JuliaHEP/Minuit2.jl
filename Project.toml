@@ -5,28 +5,35 @@ version = "0.2.1"
 
 [deps]
 CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Minuit2_Julia_Wrapper_jll = "65cff058-67fb-5034-9600-a8f6a0feb90b"
+Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+FHist = "68837c9b-b678-4cd5-9925-8a54edc8f695"
 
 [weakdeps]
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-FHist = "68837c9b-b678-4cd5-9925-8a54edc8f695"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 
 [extensions]
-Minuit2PlotsExt = ["Plots", "FHist"]
 Minuit2FHistExt = ["FHist"]
+Minuit2PlotsExt = ["Plots", "FHist"]
 
 [compat]
 CxxWrap = "0.16"
 Distributions = "0.25.117"
+IterTools = "1.10.0"
 LinearAlgebra = "1.11.0"
 Minuit2_Julia_Wrapper_jll = "0.3.0"
 Plots = "1.40.9"
+Polynomials = "4.0.19"
 PrettyTables = "2.4.0"
+Random = "1.11.0"
 julia = "1.9"
 
 [extras]
@@ -35,4 +42,4 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "StatsBase", "LinearAlgebra", "FHist", "FiniteDiff"]
+test = ["Test", "StatsBase", "LinearAlgebra", "FiniteDiff", "QuadGK"]

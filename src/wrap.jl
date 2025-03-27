@@ -1,5 +1,9 @@
 import Base: getproperty, setproperty!, setindex!, getindex, ==, length, copy
 
+#---CxxWrap additions------------------------------------------------------------------------------
+import CxxWrap: StdVector, ConstCxxRef
+getindex(v::ConstCxxRef{StdVector{T}}, i::Vector{Int64}) where T = v[][i]
+
 #---MnStrategy-------------------------------------------------------------------------------------
 export MnStrategy
 const MnStrategy = ROOT!Minuit2!MnStrategy

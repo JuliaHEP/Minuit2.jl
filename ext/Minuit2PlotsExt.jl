@@ -86,49 +86,65 @@ end
 function Minuit2.visualize(m::Minuit; nbins=50, kwargs...)
     isnothing(m.cost) && throw(ArgumentError("Minuit object does not have a cost function"))
     m.cost.ndim > 1 && throw(ArgumentError("Cost function dimension > 1 not supported"))
-    cost = m.cost
-    if cost isa LeastSquares
-        x = cost.x
-        y = cost.y
-        yerr = cost.yerror
-        plt = plot(x, y, yerr=yerr, seriestype=:scatter, kwargs...)
-        if m.is_valid
-            pars = m.values
-            yt = cost.model.(x, pars...)
-            plt = plot!(plt, x, yt; label="Fit")
-        end
-        return plt
-    elseif cost isa UnbinnedNLL
-        h = Hist1D(cost.data, nbins=nbins)
-        x = bincenters(h)
-        y = bincounts(h)
-        dy = sqrt.(y)
-        plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
-        if m.is_valid
-            scale = prod(Base.size(cost.data))*(x[2]-x[1])
-            pars = m.values
-            plot!(plt, x -> cost.model(x, pars...)*scale; label="Fit")
-        end
-        return plt
-    elseif cost isa BinnedNLL
-        x = [0.5*(cost.binedges[i] + cost.binedges[i+1]) for i in 1:length(cost.binedges)-1]
-        dx = (x[2]-x[1])/2
-        y = cost.bincounts
-        dy = sqrt.(y)
-        plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
-        if m.is_valid
-            scale = sum(cost.bincounts)
-            pars = m.values
-            if cost.use_pdf == :approximate
-                f = x -> cost.model(x, pars...)*scale*2dx
-            else
-                f = x -> (cost.model(x+dx, pars...)-cost.model(x-dx, pars...))*scale
-            end
-            plot!(plt, f; label="Fit")
-        end
-        return plt
-    else
-        throw(ArgumentError("Cost function type not supported (yet)"))
+    visualize(m.cost, m.is_valid, collect(m.values), nbins=nbins, kwargs...)
+end
+function visualize(cost::LeastSquares, is_valid, pars; nbins=50, kwargs...)
+    x = cost.x
+    y = cost.y
+    yerr = cost.yerror
+    plt = plot(x, y, yerr=yerr, seriestype=:scatter, kwargs...)
+    if is_valid
+        yt = cost.model.(x, pars...)
+        plt = plot!(plt, x, yt; label="Fit")
     end
+    return plt
+end
+function visualize(cost::UnbinnedCostFunction, is_valid, pars; nbins=50, kwargs...)
+    h = Hist1D(cost.data, nbins=nbins)
+    x = bincenters(h)
+    y = bincounts(h)
+    dy = sqrt.(y)
+    plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
+    if is_valid
+        if cost isa UnbinnedNLL
+            scale = prod(Base.size(cost.data))*(x[2]-x[1])
+            plot!(plt, x -> cost.model(x, pars...)*scale; label="Fit")
+        else
+            scale = (x[2]-x[1])
+            plot!(plt, x -> cost.model(x, pars...)[2]*scale; label="Fit")
+        end                
+    end
+    return plt
+end
+function visualize(cost::BinnedCostFunction, is_valid, pars; nbins=50, kwargs...)
+    x = cost.bincenters
+    dx = (x[2]-x[1])/2
+    y = cost.bincounts
+    dy = sqrt.(y)
+    plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
+    if is_valid
+        if cost isa BinnedNLL
+            scale = sum(cost.bincounts)
+        else
+            scale = 1
+        end 
+        if cost.use_pdf == :approximate
+            f = x -> cost.model(x, pars...)*scale*2dx
+        else
+            f = x -> (cost.model(x+dx, pars...)-cost.model(x-dx, pars...))*scale
+        end
+        plot!(plt, f; label="Fit")
+    end
+    return plt
+end
+function visualize(cost::Minuit2.CostSum, is_valid, pars; nbins=50, kwargs...)
+    plots = []
+    for (i, c) in enumerate(cost.costs)
+        plt = visualize(c, is_valid, pars[cost.argsmapping[i]]; nbins=nbins, kwargs...)
+        push!(plots, plt)
+    end
+    n = plots |> length |> sqrt |> ceil |> Int 
+    plt = plot(plots...; layout=(n, n))
+    return plt
 end
 end

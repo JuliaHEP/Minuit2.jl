@@ -1,7 +1,22 @@
 
 # Release Notes
 
-## 0.2.1 
+## 0.2.*
+### Fixes
+- 
+### Additions
+- Extended cost functions `ExtendedBinnedNLL` and `ExtendedUnbinnedNLL`.
+  - Added examples in `costfunctions` example
+  - Added unit tests
+- Added `CostSum` to combine cost functions
+  - Added unit test
+  - Added `combined` tutorial
+- Extended Distributions with a Chebyshev polynomial distribution
+- Added `elapsed` time of the minuit printout
+- Added module `RooFit` with some very simple elements to build models
+  - Added tutorial `roofit` and unit tests
+
+## 0.2.1 (5-03-2025) 
 ### Fixes
 - Keyword argument for gradient in cost functions is `grad`
 - Fixed convergence for BinnedNLL with gradient

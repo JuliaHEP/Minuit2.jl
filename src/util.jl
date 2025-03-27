@@ -32,6 +32,11 @@ function setindex!(view::AbstractView, value, key)
     ipar, _ = keypair(view.minuit, key)
     _set(view, ipar, value)
 end
+function setindex!(view::AbstractView, value, key...)
+    for k in key
+        setindex!(view, value, k)
+    end
+end
 length(view::AbstractView) = view.minuit.npar
 lastindex(view::AbstractView) = view.minuit.npar
 iterate(view::AbstractView, state=1) = state > length(view) ? nothing : (view[state], state + 1)
@@ -264,16 +269,18 @@ function Base.show(io::IO, f::FunctionMinimum, m=nothing)
     # additional info not in FunctionMinimum
     fval = string(round(f.fval, digits=3))
     nfcn = string(f.nfcn)
+    elapsed = ""
     if !isnothing(m)
         rc = reduced_chi2(m)
         !isnan(rc) && (fval = "$fval χ²/ndof=$(round(rc,digits=3))")
         m.ngrad > 0 && (nfcn = "nfcn=$nfcn ngrad=$(m.ngrad)")
         m.method == :scan && (nfcn = "nfcn=$(m.nfcn)")
+        elapsed = best_time_unit(m.elapsed)
     end
 
-    data1 = ["FCN"        "Method"       "Ncalls"   "Iterations" "Up";
-    fval isnothing(m) ? " " : m.method    nfcn       f.niter     f.up;
-    "Valid Min."     "Valid Param."	      "Above EDM"           "Call limit"              "Edm";
+    data1 = ["FCN"        "Method"       "Ncalls"   "Iterations" "Elapsed time";
+    fval isnothing(m) ? " " : m.method    nfcn       f.niter     elapsed;
+    "Valid Min."     "Valid Param."	      "Above EDM"            "Call limit"  "Edm";
     f.is_valid	     f.has_valid_parameters  f.is_above_max_edm	f.has_reached_call_limit  f.edm;
     "Hesse failed"	 "Has cov."	          "Accurate"	        "Pos. def."               "Forced";
     f.hesse_failed   f.has_covariance     f.has_accurate_covar	f.has_posdef_covar        f.has_made_posdef_covar]
@@ -290,6 +297,8 @@ function Base.show(io::IO, m::Minuit)
         show(io, m.parameters)
         if m.has_covariance
             cov = [m.covariance(i, j) for i in 1:m.npar, j in 1:m.npar]
+            d = diag(cov) .^ 0.5
+            cov ./= d .* d'
             header = [" ", m.names...]
             data = hcat(m.names, cov)
             pretty_table(io, data; header=header, alignment=:l, show_header=true)
@@ -307,3 +316,6 @@ function get_nargs(f)
     m = first(methods(f))
     length(m.sig.parameters)-1
 end
+
+best_time_unit(t) = t >= 1 ? "$(round(t,digits=3)) s" : t >= 1e-3 ? "$(round(t*1e3,digits=3)) ms" : 
+                    t >= 1e-6 ? "$(round(t*1e6,digits=3)) µs" : "$(round(t*1e9,digits=3)) ns" 

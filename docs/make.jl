@@ -13,9 +13,10 @@ function process_literate(names...)
 end
 
 basic_mds    = process_literate("introduction", "costfunctions")
+advanced_mds = process_literate("combined", "roofit")
 
 makedocs(;
-    modules=[Minuit2],
+    modules=[Minuit2, Minuit2.RooFit],
     format = Documenter.HTML(
         prettyurls = Base.get(ENV, "CI", nothing) == "true",
         size_threshold = 8000000,
@@ -25,7 +26,8 @@ makedocs(;
     pages=[
         "Introduction" => "index.md",
         "Public API" => "api.md",
-        "Tutorials" => [ "Basic" => basic_mds ],
+        "Tutorials" => [ "Basic" => basic_mds,
+                        "Advanced" => advanced_mds],
         "Release Notes" => "release_notes.md",
     ],
     checkdocs=:exports,

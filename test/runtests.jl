@@ -1,4 +1,5 @@
 using Minuit2
+using Minuit2.RooFit
 using Test
 
 @testset "Minuit2 tests" verbose = true begin 
@@ -7,4 +8,5 @@ using Test
     include("test_util.jl")
     include("test_api.jl")
     include("test_cost.jl")
+    include("test_roofit.jl")
 end

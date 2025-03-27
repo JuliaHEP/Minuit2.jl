@@ -59,7 +59,8 @@ mutable struct Minuit
     last_state::MnUserParameterState                # The last user parameters
     app::Union{MnApplication, Nothing}              # The Minuit application
     fmin::Union{FunctionMinimum, Nothing}           # The result of the minimization
-    mino::Union{Dict{String, MinosError}, Nothing} # The Minos errors
+    mino::Union{Dict{String, MinosError}, Nothing}  # The Minos errors
+    elapsed::Float64                                # The elapsed time of last operation
 end
 
 #---Minuit struct functions------------------------------------------------------------------------
@@ -154,7 +155,7 @@ function FCN(cost::CostFunction, grad=true)
             quote
                 function $fcn(obj::Ptr{Cvoid}, args)::Float64
                     costfunc = unsafe_pointer_to_objref(obj)::$COST
-                    Minuit2.value(costfunc, args)
+                    Minuit2.cost_value(costfunc, args)
                 end
                 function $gra(obj::Ptr{Cvoid}, grad, args)::Nothing
                     costfunc = unsafe_pointer_to_objref(obj)::$COST
@@ -179,7 +180,7 @@ function FCN(cost::CostFunction, grad=true)
             quote
                 function $fcn(obj::Ptr{Cvoid}, args)::Float64
                     costfunc = unsafe_pointer_to_objref(obj)::$COST
-                    Minuit2.value(costfunc, args)
+                    Minuit2.cost_value(costfunc, args)
                 end
             end )
         sf = eval( quote
@@ -334,7 +335,7 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), meth
         haskey(kwargs, Symbol("fix_", name)) && Fix(userpars, i-1)
     end
     names = [Name(userpars, i-1) for i in 1:npar]
-    Minuit(funcname, cost, jf, x0, npar, names, method, tolerance, precision, strategy, userpars, userpars, nothing, nothing, nothing)
+    Minuit(funcname, cost, jf, x0, npar, names, method, tolerance, precision, strategy, userpars, userpars, nothing, nothing, nothing, 0.0)
 end
 
 function ndof(m::Minuit)
@@ -372,7 +373,7 @@ minimum.
 """
 function migrad!(m::Minuit, strategy=1)
     migrad = MnMigrad(m.fcn, m.last_state, MnStrategy(strategy))
-    min = migrad(0, m.tolerance)   # calls the operator () to do the minimization
+    elapsed = @elapsed min = migrad(0, m.tolerance)   # calls the operator () to do the minimization
     #---Update the Minuit object with the results---------------------------------------------------
     m.app = migrad
     m.method = :migrad
@@ -380,6 +381,7 @@ function migrad!(m::Minuit, strategy=1)
     m.mino = nothing
     m.strategy = strategy
     m.last_state = UserState(min)[]
+    m.elapsed = elapsed
     return m
 end
 
