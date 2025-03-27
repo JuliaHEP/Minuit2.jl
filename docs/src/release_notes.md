@@ -13,6 +13,8 @@
   - Added `combined` tutorial
 - Extended Distributions with a Chebyshev polynomial distribution
 - Added `elapsed` time of the minuit printout
+- Added module `RooFit` with some very simple elements to build models
+  - Added tutorial `roofit` and unit tests
 
 ## 0.2.1 (5-03-2025) 
 ### Fixes

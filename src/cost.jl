@@ -5,7 +5,7 @@
 #-------------------------------------------------------------------------------------------
 import IterTools
 abstract type CostFunction end
-import Base: getproperty, setproperty!, propertynames, show, getindex, length, size
+import Base: getproperty, setproperty!, propertynames, show, getindex, length
 export LeastSquares, Constant, CostFunction, UnbinnedCostFunction, BinnedCostFunction,
        BaseCost, UnbinnedNLL, BinnedNLL, ExtendedUnbinnedNLL, ExtendedBinnedNLL
 export value, grad, has_grad
@@ -159,9 +159,10 @@ verbose(cost::CostFunction) = cost.base.verbose
 verbose(cost::CostFunction, level::Int) = (cost.base.verbose = level; cost)
 (cost::CostFunction)(args...) = value(cost, args)
 function cost_value(cost::CostFunction, args)
-    r = value(cost, args)
+    targs = Tuple(args[])
+    r = value(cost, targs)
     if verbose(cost) > 0
-        println("$(tuple(args...)) -> $r")
+        println("$targs -> $r")
     end
     return r
 end
@@ -190,7 +191,7 @@ function getproperty(cost::CostFunction, sym::Symbol)
 end
 
 #---Abstract Binned cost function------------------------------------------------------------------
-abstract type BinnedCostFunction <: CostFunction end
+abstract type BinnedCostFunction{T<:Real,N} <: CostFunction end
 has_grad(cost::BinnedCostFunction) = cost.model_grad !== nothing
 ndata(cost::BinnedCostFunction) = length(cost.bincounts)
 
@@ -308,12 +309,12 @@ function grad(cost::CostSum, args)
 end
 
 #---UnbinnedNLL cost function---------------------------------------------------------------------
-mutable struct UnbinnedNLL <: UnbinnedCostFunction
+mutable struct UnbinnedNLL{T<:Real,N,F<:Function} <: UnbinnedCostFunction
     base::BaseCost
     log::Bool
-    data::Array{Float64}
+    data::Array{T,N}
     mask::Union{Vector{Bool}, BitVector, Nothing}
-    model::Function
+    model::F
     model_grad::Union{Function, Nothing}
 end
 
@@ -348,12 +349,14 @@ Unbinned negative log-likelihood cost function.
 ## Returns
 - Cost function object.
 """
-function UnbinnedNLL(data::AbstractArray, pdf::Function; log=false, verbose=0, mask=nothing, grad=nothing, names=())
+function UnbinnedNLL(data::AbstractArray, pdf::F; log=false, verbose=0, mask=nothing, grad=nothing, names=()) where F<:Function
     if ndims(data) == 1 && eltype(data) <: Tuple
         data = reduce(vcat, [[t...]' for t in data])
     end
+    T = eltype(data)
+    N = ndims(data)
     params = model_parameters(pdf, names)
-    UnbinnedNLL(BaseCost(verbose, params), log, data, mask, pdf, grad)
+    UnbinnedNLL{T,N,F}(BaseCost(verbose, params), log, data, mask, pdf, grad)
 end
 
 
@@ -387,12 +390,12 @@ function grad(cost::UnbinnedNLL, args)
 end
 
 #---ExtendedUnbinnedNLL cost function-------------------------------------------------------------
-mutable struct ExtendedUnbinnedNLL <: UnbinnedCostFunction
+mutable struct ExtendedUnbinnedNLL{T<:Real,N,F<:Function} <: UnbinnedCostFunction
     base::BaseCost
     log::Bool
-    data::Array{Float64}
+    data::Array{Float64,N}
     mask::Union{Vector{Bool}, BitVector, Nothing}
-    model::Function
+    model::F
     model_grad::Union{Function, Nothing}
 end
 
@@ -423,12 +426,14 @@ original unbinned data is available. The data can be one- or multi-dimensional.
    the pdf, but must return an array with the shape (K, N), where N is the number of data points and K is the number of parameters.
 - `names` : Optional names for each parameter of the model (in order). Must have the same length as there are model parameters.
 """
-function ExtendedUnbinnedNLL(data::AbstractArray, scaled_pdf::Function; log=false, verbose=0, mask=nothing, grad=nothing, names=())
+function ExtendedUnbinnedNLL(data::AbstractArray, scaled_pdf::F; log=false, verbose=0, mask=nothing, grad=nothing, names=()) where F<:Function
     if ndims(data) == 1 && eltype(data) <: Tuple
         data = reduce(vcat, [[t...]' for t in data])
     end
+    N = ndims(data)
+    T = eltype(data)
     params = model_parameters(scaled_pdf, names)
-    ExtendedUnbinnedNLL(BaseCost(verbose, params), log, data, mask, scaled_pdf, grad)
+    ExtendedUnbinnedNLL{T,N,F}(BaseCost(verbose, params), log, data, mask, scaled_pdf, grad)
 end
 
 function value(cost::ExtendedUnbinnedNLL, args)
@@ -449,19 +454,17 @@ function grad(cost::ExtendedUnbinnedNLL, args)
 end
 
 #---BinnedNLL cost function-----------------------------------------------------------------------
-mutable struct BinnedNLL <: BinnedCostFunction
+mutable struct BinnedNLL{T<:Real,N,F<:Function} <: BinnedCostFunction{T,N}
     base::BaseCost
-    bincounts::Array{Float64}
-    binedges::Union{AbstractArray, Tuple}
-    model::Function
+    bincounts::Array{T,N}
+    model::F
     model_grad::Union{Function, Nothing}
     use_pdf::Symbol
     entries::Int
-    bincenters::Union{Nothing, AbstractArray}
-    binwidths::Union{Nothing, AbstractArray}
-    loweredges::Union{Nothing, AbstractArray}
-    upperedges::Union{Nothing, AbstractArray}
-    pred::Function
+    bincenters::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
+    binwidths::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
+    loweredges::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
+    upperedges::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
 end
 
 """
@@ -491,42 +494,37 @@ The histogram can be one- or multi-dimensional.
    This is fast and works in higher dimensions, but can lead to biased results if the curvature of the pdf inside the bin is significant.
 - `names` : Optional names for each parameter of the model (in order). Must have the same length as there are model parameters.
 """
-function BinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tuple}, cdf::Function; use_pdf=:none, verbose=0,  grad=nothing, names=())
+function BinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tuple}, cdf::F; use_pdf=:none, verbose=0,  grad=nothing, names=()) where F<:Function
     ndim = ndims(bincounts)
-    ndim < 2 || binedges isa Tuple || throw(ArgumentError("binedges must be a Tuple"))
+    T = eltype(bincounts)
+    ndim < 2 || binedges isa Tuple || throw(ArgumentError("binedges must be a Tuple for ndim > 1"))
     params = model_parameters(cdf, names)
     if use_pdf == :numerical
         throw(ArgumentError("numerical calculation not implemented yet"))
-    elseif use_pdf == :approximate
+    elseif use_pdf == :approximate || use_pdf == :none
         centers = bincenters(binedges)
         widths = binwidths(binedges)
-        ledges = nothing
-        uedges = nothing
-        pred = _pred_approx
-    else
-        centers = nothing
-        widths = nothing
         ledges = loweredges(binedges)
         uedges = upperedges(binedges)
-        pred = _pred_cdf
+    else
+        throw(ArgumentError("unknown use_pdf: $use_pdf"))
     end
-    BinnedNLL(BaseCost(verbose, params), bincounts, binedges, cdf, grad, use_pdf, sum(bincounts), centers, widths, ledges, uedges, pred)
+    BinnedNLL{T,ndim,F}(BaseCost(verbose, params), bincounts, cdf, grad, use_pdf, sum(bincounts), centers, widths, ledges, uedges)
 end
 
-function _pred_approx(cost::BinnedCostFunction, args)
-    f = cost.model.(cost.bincenters, args...) .* prod.(cost.binwidths)
+function _pred(cost::BinnedCostFunction, args)
+    if cost.use_pdf == :approximate
+        f = cost.model.(cost.bincenters, args...) .* prod(cost.binwidths[1])
+    else
+        f = cost.model(cost.upperedges, args...) .- cost.model(cost.loweredges, args...)
+        f[f .<= 0] .= F64_TINY
+    end
     return f
 end
-function _pred_cdf(cost::BinnedCostFunction, args)
-    f = cost.model(cost.upperedges, args...) .- cost.model(cost.loweredges, args...)
-    f[f .<= 0] .= F64_TINY
-    return f
-end
-
 
 function _pred_grad(cost::BinnedCostFunction, args)
     if cost.use_pdf == :approximate
-        gf = cost.model_grad.(cost.bincenters, args...) .* cost.binwidths
+        gf = cost.model_grad.(cost.bincenters, args...) .* prod(cost.binwidths[1])
     else
         gf = (cost.model_grad.(cost.upperedges, args...) - cost.model_grad.(cost.loweredges, args...))
     end
@@ -534,32 +532,29 @@ function _pred_grad(cost::BinnedCostFunction, args)
 end
 
 function value(cost::BinnedNLL, args)
-    p = cost.pred(cost, args) * cost.entries  # scale probabilities with number entries
-    r = multinomial_chi2(cost.bincounts, p)
-    return r
+    p = _pred(cost, args) * cost.entries
+    multinomial_chi2(cost.bincounts, p)
 end
 
 function grad(cost::BinnedNLL, args)
     isnothing(cost.model_grad) && throw(ArgumentError("no gradient available"))
-    p = cost.pred(cost, args) * cost.entries   # scale probabilities with number entries
+    p = _pred(cost, args) * cost.entries
     gf = _pred_grad(cost, args) * cost.entries # scale gradients with number entries
-    multinomial_chi2_grad(cost.bincounts, p, gf)
+    multinomial_chi2_grad(cost.bincounts, p, gf) |> vec
 end
 
 #---ExtendedBinnedNLL cost function-------------------------------------------------------------
-mutable struct ExtendedBinnedNLL <: BinnedCostFunction
+mutable struct ExtendedBinnedNLL{T<:Real,N,F<:Function} <: BinnedCostFunction{T,N}
     base::BaseCost
-    bincounts::Array{Float64}
-    binedges::Union{AbstractArray, Tuple}
-    model::Function
+    bincounts::Array{T,N}
+    model::F
     model_grad::Union{Function, Nothing}
     use_pdf::Symbol
     entries::Int
-    bincenters::Union{Nothing, AbstractArray}
-    binwidths::Union{Nothing, AbstractArray}
-    loweredges::Union{Nothing, AbstractArray}
-    upperedges::Union{Nothing, AbstractArray}
-    pred::Function
+    bincenters::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
+    binwidths::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
+    loweredges::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
+    upperedges::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
 end
 
 """
@@ -598,36 +593,30 @@ saturated model as a reference.
 - `names` : Optional names for each parameter of the model (in order). Must have the same length as there are model parameters.
 
 """
-function ExtendedBinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tuple}, cdf::Function; use_pdf=:none, verbose=0,  grad=nothing, names=())
+function ExtendedBinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tuple}, cdf::F; use_pdf=:none, verbose=0,  grad=nothing, names=()) where F<:Function
     ndim = ndims(bincounts)
+    T = eltype(bincounts)
     ndim < 2 || binedges isa Tuple || throw(ArgumentError("binedges must be a Tuple"))
     params = model_parameters(cdf, names)
     if use_pdf == :numerical
         throw(ArgumentError("numerical calculation not implemented yet"))
-    elseif use_pdf == :approximate
+    elseif use_pdf == :approximate || use_pdf == :none
         centers = bincenters(binedges)
         widths = binwidths(binedges)
-        ledges = nothing
-        uedges = nothing
-        pred = _pred_approx
-    else
-        centers = nothing
-        widths = nothing
         ledges = loweredges(binedges)
         uedges = upperedges(binedges)
-        pred = _pred_cdf
     end
-    ExtendedBinnedNLL(BaseCost(verbose, params), bincounts, binedges, cdf, grad, use_pdf, sum(bincounts), centers, widths, ledges, uedges, pred)
+    ExtendedBinnedNLL{T,ndim,F}(BaseCost(verbose, params), bincounts, cdf, grad, use_pdf, sum(bincounts), centers, widths, ledges, uedges)
 end
 
 function value(cost::ExtendedBinnedNLL, args)
-    mu = cost.pred(cost, args)
+    mu = _pred(cost, args)
     return poisson_chi2(cost.bincounts, mu)
 end
 
 function grad(cost::ExtendedBinnedNLL, args)
     isnothing(cost.model_grad) && throw(ArgumentError("no gradient available"))
-    mu = cost.pred(cost, args)
+    mu = _pred(cost, args)
     gmu = _pred_grad(cost, args)
     poisson_chi2_grad(cost.bincounts, mu, gmu)
 end

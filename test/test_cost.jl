@@ -1,4 +1,4 @@
-using Distributions
+import Distributions: Normal, MvNormal, pdf, logpdf, cdf, truncated, mean, std
 using FiniteDiff: finite_difference_gradient
 using FHist
 
@@ -105,8 +105,8 @@ using FHist
     
         if use_grad
             ref = numerical_cost_gradient(cost)
-            @test grad(cost, [μ, σ])' ≈ ref(μ, σ)
-            @test grad(cost, [-1., 3.])' ≈ ref(-1., 3.)
+            @test grad(cost, [μ, σ]) ≈ ref(μ, σ)
+            @test grad(cost, [-1., 3.]) ≈ ref(-1., 3.)
         end
 
         m = Minuit(cost, μ=0, σ=1, grad=use_grad)

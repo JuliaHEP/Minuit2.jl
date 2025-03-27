@@ -13,10 +13,10 @@ function process_literate(names...)
 end
 
 basic_mds    = process_literate("introduction", "costfunctions")
-advanced_mds = process_literate("combined")
+advanced_mds = process_literate("combined", "roofit")
 
 makedocs(;
-    modules=[Minuit2],
+    modules=[Minuit2, Minuit2.RooFit],
     format = Documenter.HTML(
         prettyurls = Base.get(ENV, "CI", nothing) == "true",
         size_threshold = 8000000,

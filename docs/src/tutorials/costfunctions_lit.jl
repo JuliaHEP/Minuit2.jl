@@ -185,7 +185,7 @@ visualize(m)
 
 # #### Extended BinnedNLL Fits
 # As in the unbinned case, the binned extended maximum-likelihood fit should be used when also 
-#the amplitudes of the pdfs are of interest.
+# the amplitudes of the pdfs are of interest.
 
 # Instead of a density, you need to provide the integrated density in this case (which must be vectorized).
 # There is no need to separately return the total integral of the density, 

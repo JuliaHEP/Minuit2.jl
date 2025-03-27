@@ -21,6 +21,7 @@ module Minuit2
     include("cost.jl")
     include("api.jl")
     include("distributions.jl")
+    include("roofit.jl")
 
     export draw_contour, draw_mncontour, draw_profile, draw_mnprofile, visualize
     function draw_contour end

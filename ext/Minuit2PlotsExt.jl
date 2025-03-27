@@ -117,7 +117,7 @@ function visualize(cost::UnbinnedCostFunction, is_valid, pars; nbins=50, kwargs.
     return plt
 end
 function visualize(cost::BinnedCostFunction, is_valid, pars; nbins=50, kwargs...)
-    x = [0.5*(cost.binedges[i] + cost.binedges[i+1]) for i in 1:length(cost.binedges)-1]
+    x = cost.bincenters
     dx = (x[2]-x[1])/2
     y = cost.bincounts
     dy = sqrt.(y)
