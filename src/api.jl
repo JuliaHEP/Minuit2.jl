@@ -354,7 +354,7 @@ function reduced_chi2(m::Minuit)
 end
 
 """
-    migrad!(m::Minuit, strategy=1)
+    migrad!(m::Minuit, strategy=1; ncall=0)
 
 Run Migrad minimization.
 
@@ -370,10 +370,12 @@ minimum.
     the recommended value for most cases. The value 0 is faster, but less
     reliable. The value 2 is slower, but more reliable. The value 3 or higher is slower,
     but even more reliable.
+## Keyword Parameters
+- `ncall::Int=0` : Approximate upper limit for the number of calls. If set to 0, use the adaptive heuristic from the Minuit2 library.
 """
-function migrad!(m::Minuit, strategy=1)
+function migrad!(m::Minuit, strategy=1; ncall=0)
     migrad = MnMigrad(m.fcn, m.last_state, MnStrategy(strategy))
-    elapsed = @elapsed min = migrad(0, m.tolerance)   # calls the operator () to do the minimization
+    elapsed = @elapsed min = migrad(ncall, m.tolerance)   # calls the operator () to do the minimization
     #---Update the Minuit object with the results---------------------------------------------------
     m.app = migrad
     m.method = :migrad
