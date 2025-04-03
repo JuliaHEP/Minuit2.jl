@@ -1,5 +1,6 @@
 module Minuit2PlotsExt
 using Minuit2
+using Minuit2.RooFit
 using FHist
 
 isdefined(Base, :get_extension) ? (using Plots) : (using ..Plots)
@@ -86,7 +87,7 @@ end
 function Minuit2.visualize(m::Minuit; nbins=50, kwargs...)
     isnothing(m.cost) && throw(ArgumentError("Minuit object does not have a cost function"))
     m.cost.ndim > 1 && throw(ArgumentError("Cost function dimension > 1 not supported"))
-    visualize(m.cost, m.is_valid, collect(m.values), nbins=nbins, kwargs...)
+    visualize(m.cost, m.is_valid, collect(m.values); nbins=nbins, kwargs...)
 end
 function visualize(cost::LeastSquares, is_valid, pars; nbins=50, kwargs...)
     x = cost.x
@@ -112,7 +113,7 @@ function visualize(cost::UnbinnedCostFunction, is_valid, pars; nbins=50, kwargs.
         else
             scale = (x[2]-x[1])
             plot!(plt, x -> cost.model(x, pars...)[2]*scale; label="Fit")
-        end                
+        end              
     end
     return plt
 end
@@ -147,4 +148,40 @@ function visualize(cost::Minuit2.CostSum, is_valid, pars; nbins=50, kwargs...)
     plt = plot(plots...; layout=(n, n))
     return plt
 end
+
+#----Visualize fit and model
+function Minuit2.visualize(m::Minuit, model::AbstractPdf; nbins=-1, components=(), kwargs...)
+    isnothing(m.cost) && throw(ArgumentError("Minuit object does not have a cost function"))
+    m.cost.ndim > 1 && throw(ArgumentError("Cost function dimension > 1 not supported"))
+    m.cost isa UnbinnedCostFunction && nbins == -1 && (nbins = 50)
+    plt = visualize(m.cost, m.is_valid, collect(m.values), nbins=nbins; kwargs...)
+    #---Components of the model
+    for c in components
+        comp, weight = model[c]
+        a, b = comp.x.limits
+        if m.cost isa UnbinnedNLL
+            nbins == -1 && (nbins = 50)
+            scale = weight * prod(Base.size(m.cost.data)) * (b-a)/nbins
+        elseif m.cost isa ExtendedUnbinnedNLL
+            nbins == -1 && (nbins = 50)
+            scale = weight * (b-a)/nbins
+        elseif m.cost isa BinnedNLL
+            nbins != -1 && nbins != comp.x.nbins && @warn "Forced #bins to $(comp.x.nbins)"
+            scale = weight * (b-a)/comp.x.nbins * sum(m.cost.bincounts)
+        elseif m.cost isa ExtendedBinnedNLL
+            nbins != -1 && nbins != comp.x.nbins && @warn "Forced #bins to $(comp.x.nbins)"
+            scale = weight * (b-a)/comp.x.nbins
+        end
+        func = x -> comp.pdf(x, (p.value for p in comp.params)...) * scale
+        plot!(plt, func; label="$(comp.name)", kwargs...)
+    end
+    return plt
+end
+#---Visualize PDF model
+function Minuit2.visualize(model::AbstractPdf; kwargs...)
+    isnothing(model.x) && throw(ArgumentError("Model does not have a variable"))
+    plt = plot(x->model(x), model.x.limits...; label="$(model.name)", kwargs...)
+    return plt
+end
+
 end

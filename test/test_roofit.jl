@@ -12,15 +12,36 @@ using QuadGK
         @test x.limits == (0., 10.)
         @test x.nbins == 20
 
+        # Set value
+        x.value = 1.0
+        @test x.value == 1.0
+        x[] = 2.0
+        @test x.value == 2.0
+        @test_throws ArgumentError x.limits = (2., 10.)
+        @test_warn "below limits" x.value = -1.0
+        @test x.value == 0.
+        @test_warn "above limits" x.value = 11.0
+        @test x.value == 10.
+        
         x = RealVar(:x, 1.0)
         @test x.value == 1.0
         @test x.limits == (-Inf, Inf)
         @test x.nbins == 50
+    
 
         # Other Real types
         x = RealVar(:x, 0.0f0, limits=(0.0f0, 10.0f0))
         @test x.value == 0.0f0
         @test x.limits == (0.0f0, 10.0f0)
+
+        # Constants
+        c1 = ConstVar(:c1, 1.0)
+        @test c1.name == :c1
+        @test c1.value == 1.0
+        @test_throws ArgumentError c1.value = 2.0
+        @test_throws ArgumentError c1.limits = (2., 10.)
+        c = ConstVar(1.0)
+        @test c.value == 1.0
     end
 
     @testset "Gaussian" begin
@@ -48,12 +69,14 @@ using QuadGK
         @test maximum(data) <= 10.
 
         # Other Real types
-        x = RealVar(:x, limits=(0.0f0, 10.0f0), nbins=20)
+        x = RealVar(:x, 0.0f0, limits=(0.0f0, 10.0f0), nbins=20)
         μ = RealVar(:μ, 3.0f0, limits=(0.0f0, 5.0f0))
         σ = RealVar(:σ, 0.8f0, limits=(0.5f0, 3.0f0))
         g = Gaussian(:gauss32, x, μ, σ)
         @test g.pdf(5.0f0) ≈ pdf(truncated(Normal(3.0f0, 0.8f0),0.0f0,10.0f0), 5.0f0)
         @test quadgk(x -> g.pdf(x), x.limits...)[1] ≈ 1.0f0
+
+        @test show(devnull, g) === nothing
     end
 
     @testset "Exponential" begin
@@ -73,7 +96,7 @@ using QuadGK
         @test quadgk(x -> e.pdf(x), x.limits...)[1] ≈ 1.
 
         # Other Real types
-        x = RealVar(:x, limits=(0.0f0, 10.0f0), nbins=20)
+        x = RealVar(:x, 0.0f0, limits=(0.0f0, 10.0f0), nbins=20)
         c = RealVar(:c, -0.5f0, limits=(-0.8f0, -0.2f0))
         e = Exponential(:exp32, x, c)
         @test e.pdf(5.0f0) ≈ pdf(truncated(_Exponential(1/0.5f0), 0.0f0, 10.0f0), 5.0f0)
@@ -101,13 +124,22 @@ using QuadGK
 
         @test model.pdf(5., μ1.value, σ1.value, μ2.value, σ2.value, 0.5, c.value, 0.8) ≈ 0.8 * (0.5 * sig1.pdf(5.) + 0.5 * sig2.pdf(5.)) + 0.2 * bkg.pdf(5.)
         @test quadgk(x -> model.pdf(x, 2., 1., 6., 1., 0.5, -2., .5), x.limits...)[1] ≈ 1.
+        @test quadgk(x -> model.pdf(x), x.limits...)[1] ≈ 1.
 
         # Fit the model with generated data
-        h = generateBinned(model, 1000)
-        m = Minuit(BinnedNLL(h, model.pdf, use_pdf=:approximate), [p.value for p in model.params])
+        h = generateBinned(model, 10000)
+        m = Minuit(BinnedNLL(h, model.pdf, use_pdf=:approximate); minuitkwargs(model, randomize=true)...)
         migrad!(m)
         @test m.is_valid
         @test m.values ≈ [μ1.value, σ1.value, μ2.value, σ2.value, f_sig1.value, c.value, f_sig.value] rtol=1e-1
+
+        m = Minuit(BinnedNLL(h, model.pdf, use_pdf=:approximate); minuitkwargs(model)...)
+        migrad!(m)
+        @test m.is_valid
+        @test m.values ≈ [μ1.value, σ1.value, μ2.value, σ2.value, f_sig1.value, c.value, f_sig.value] rtol=1e-1
+
+        # test show methods
+        @test show(devnull, model) === nothing
     end
 
 end

@@ -1,7 +1,7 @@
 
 # Release Notes
 
-## 0.2.*
+## 0.3.0 (03-04-2025)
 ### Fixes
 - 
 ### Additions
