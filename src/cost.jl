@@ -101,7 +101,7 @@ end
 Compute gradient of function `multinomial_chi2`.
 """
 function multinomial_chi2_grad(n, mu, gmu)
-    return - 2 * sum( (n ./ mu)' * gmu, dims=1)
+    return - 2 * sum( (vec(n) ./ vec(mu))' * gmu, dims=1)
 end
 
 """
@@ -211,13 +211,13 @@ function getproperty(cost::BinnedCostFunction, sym::Symbol)
     end
 end
 bincenters(edges::AbstractVector) = [(edges[i] + edges[i+1])/2 for i in 1:length(edges)-1]
-bincenters(edges::Tuple) = IterTools.product([bincenters(collect(e)) for e in edges]...) |> collect
+bincenters(edges::Tuple) = Iterators.product([bincenters(collect(e)) for e in edges]...) |> collect
 binwidths(edges::AbstractVector) = diff(edges)
-binwidths(edges::Tuple) = IterTools.product([binwidths(e) for e in edges]...) |> collect
+binwidths(edges::Tuple) = Iterators.product([binwidths(e) for e in edges]...) |> collect
 loweredges(edges::AbstractVector) = [edges[i] for i in 1:length(edges)-1]
-loweredges(edges::Tuple) = IterTools.product([loweredges(e) for e in edges]...) |> collect
+loweredges(edges::Tuple) = Iterators.product([loweredges(e) for e in edges]...) |> collect
 upperedges(edges::AbstractVector) = [edges[i+1] for i in 1:length(edges)-1]
-upperedges(edges::Tuple) = IterTools.product([upperedges(e) for e in edges]...) |> collect
+upperedges(edges::Tuple) = Iterators.product([upperedges(e) for e in edges]...) |> collect
 
 #---Abstract Unbinned cost function----------------------------------------------------------------
 abstract type UnbinnedCostFunction <: CostFunction end
@@ -516,7 +516,7 @@ function _pred(cost::BinnedCostFunction, args)
     if cost.use_pdf == :approximate
         f = cost.model.(cost.bincenters, args...) .* prod(cost.binwidths[1])
     else
-        f = cost.model(cost.upperedges, args...) .- cost.model(cost.loweredges, args...)
+        f = cost.model.(cost.upperedges, args...) .- cost.model.(cost.loweredges, args...)
         f[f .<= 0] .= F64_TINY
     end
     return f

@@ -8,5 +8,11 @@ end
 function Minuit2.BinnedNLL(h::Hist2D, model::Function; kwargs...)
     BinnedNLL(bincounts(h), binedges(h), model; kwargs...)
 end
+function Minuit2.ExtendedBinnedNLL(h::Hist1D, model::Function; kwargs...)
+    ExtendedBinnedNLL(bincounts(h), binedges(h), model; kwargs...)
+end
+function Minuit2.ExtendedBinnedNLL(h::Hist2D, model::Function; kwargs...)
+    ExtendedBinnedNLL(bincounts(h), binedges(h), model; kwargs...)
+end
 
 end # module

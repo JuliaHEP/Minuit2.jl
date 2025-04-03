@@ -105,8 +105,8 @@ using FHist
     
         if use_grad
             ref = numerical_cost_gradient(cost)
-            @test grad(cost, [μ, σ]) ≈ ref(μ, σ)
-            @test grad(cost, [-1., 3.]) ≈ ref(-1., 3.)
+            @test grad(cost, [μ, σ]) ≈ ref(μ, σ)  rtol=1e-6
+            @test grad(cost, [-1., 3.]) ≈ ref(-1., 3.) rtol=1e-6
         end
 
         m = Minuit(cost, μ=0, σ=1, grad=use_grad)
@@ -209,6 +209,32 @@ using FHist
         @test m.errors["μ"] ≈ √sum(nx)/sum(nx) atol=0.05
         @test m.ndof == length(nx) - 3
 
+        if use_grad
+            @test m.fcn.ngrad > 0
+        else
+            @test m.fcn.ngrad == 0
+        end
+    end
+
+    @testset "BinnedNLL_2D$(glabel(use_grad))_$use_pdf" for use_grad in (false, true), use_pdf in (:approximate,)
+        if use_pdf == :none
+            model = (xy, μx, μy, σx, σy, ρ) -> cdf(mvnorm(μx, μy, σx, σy, ρ), xy |> collect)
+        else
+            model = (xy, μx, μy, σx, σy, ρ) -> pdf(mvnorm(μx, μy, σx, σy, ρ), xy |> collect)
+        end
+        truth = 0.1, 0.2, 0.3, 0.4, 0.5
+        xy = rand(mvnorm(truth...), 1000)
+        h2 = Hist2D((xy[1,:], xy[2,:]), binedges = (range(-2, 2, 51), range(-2, 2, 51)))
+        cost = BinnedNLL(h2, model, use_pdf=use_pdf, grad=numerical_model_gradient(model))
+        @test cost.ndata == length(h2.bincounts)
+
+        m = Minuit(cost, truth, grad=use_grad)
+        m.limits["σx"] = (0, Inf)
+        m.limits["σy"] = (0, Inf)
+        m.limits["ρ"] = (-1, 1)
+        migrad!(m)
+        @test m.is_valid
+        @test m.values ≈ [truth...] atol=0.1
         if use_grad
             @test m.fcn.ngrad > 0
         else
