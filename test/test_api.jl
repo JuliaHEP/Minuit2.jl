@@ -92,6 +92,12 @@
         @test m.values ≈ [1.0, 1.0] atol=2e-2
         @test m.errors ≈ [1.0, 2.0] atol=2e-2
 
+        # check ncall=...
+        m_bad = Minuit(rosenbrock, [0.0, 0.0])
+        migrad!(m_bad; ncall=1) # should results in bad fit
+        @test m_bad.niter < 2
+        @test !m_bad.is_valid
+
         # Check simplex interface
         simplex!(m)
         @test m.is_valid
