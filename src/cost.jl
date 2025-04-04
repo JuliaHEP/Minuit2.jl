@@ -169,7 +169,7 @@ end
 
 function Base.show(io::IO, cost::CostFunction)
     modelname = hasproperty(cost, :model) ? "$(cost.model)" : "unknown"
-    print(io, "$(typeof(cost)) cost function of \"$modelname\" with parameters $(cost.parameters)")
+    print(io, "$(nameof(typeof(cost))) cost function of \"$modelname\" with parameters $(cost.parameters)")
 end
 
 function getproperty(cost::CostFunction, sym::Symbol)

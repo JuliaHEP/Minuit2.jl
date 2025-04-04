@@ -162,4 +162,10 @@ m = fitTo(model, data)
 
 visualize(m, model, components=[:bkg, :sig1, :sig2], fill=0, alpha=0.4)
 
+# Finally we can also show the profile of the likelihood for the parameters of interest.
+# The `draw_mncontour` function is used to plot the contours of the likelihood function in the parameter space.
+
+draw_mncontour(m, :c, :μ)
+
+
 

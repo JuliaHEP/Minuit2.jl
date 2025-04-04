@@ -285,7 +285,8 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), meth
     if fcn isa CostFunction
         cost = fcn
         jf = FCN(fcn, grad isa Bool ? grad : true) # If grad is a boolean, use it to control it
-        funcname = "$(nameof(typeof(fcn))){$(replace("$(fcn.model)", r"^##|#\d+$" => ""))}"
+        modelname = hasproperty(cost, :model) ? "$(replace("$(fcn.model)", r"^##|#\d+$" => ""))" : "----"
+        funcname = "$(nameof(typeof(fcn))){$(modelname)}"
         names = fcn.parameters
     else
         cost = nothing        

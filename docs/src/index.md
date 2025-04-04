@@ -135,9 +135,12 @@ Unit tests can be run with `julia --project=. test/runtests.jl`
 
 ## Roadmap
 There are a number of issues and problems still to be resolved. We keep track of them in this list:
-- Add other minimization methods: e.g. Scan, Simplex
-- BinnedNLL with gradients meeds to be fixed
 - Weighted histograms need to be implemented
 - More tutorials:
     - Automatic differentiation
     - Benchmarks (fit quality and performance)
+- More in RooFit module
+    - Complete the available PDFs (e.g. RooBCPEffDecay, RooBMixDecay, RooBifurGauss, RooBreitWigner,
+      RooCBShape, RooPolynomial, etc.)
+    - More compositions (e.g. multiplication, composition and convolution)
+
