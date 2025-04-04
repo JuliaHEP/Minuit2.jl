@@ -39,7 +39,7 @@ data = generate(model, 2000)
 ##--- Perform extended NLL fit ---
 m = fitTo(model, data)
 
-visualize(m, legend=:topleft)
+visualize(m; legend=:topleft)
 
 visualize(m, model, components=(:sig, :argus); nbins=50, linestyle=:dash, legend=:topleft)
 
@@ -80,3 +80,5 @@ plot(data, label="data", c=:blue)
 m = fitTo(model, data)
 
 visualize(m, model, components=[:bkg, :sig1, :sig2], fill=0, alpha=0.4)
+
+draw_mncontour(m, :c, :μ)
