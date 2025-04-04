@@ -105,7 +105,7 @@ function visualize(cost::UnbinnedCostFunction, is_valid, pars; nbins=50, kwargs.
     x = bincenters(h)
     y = bincounts(h)
     dy = sqrt.(y)
-    plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
+    plt = plot(x, y ;yerr=dy, seriestype=:scatter, label="Data", kwargs...)
     if is_valid
         if cost isa UnbinnedNLL
             scale = prod(Base.size(cost.data))*(x[2]-x[1])
@@ -122,7 +122,7 @@ function visualize(cost::BinnedCostFunction, is_valid, pars; nbins=50, kwargs...
     dx = (x[2]-x[1])/2
     y = cost.bincounts
     dy = sqrt.(y)
-    plt = plot(x, y, yerr=dy, seriestype=:scatter, label="Data")
+    plt = plot(x, y; yerr=dy, seriestype=:scatter, label="Data", kwargs...)
     if is_valid
         if cost isa BinnedNLL
             scale = sum(cost.bincounts)

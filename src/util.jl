@@ -1,11 +1,11 @@
 import Base: getindex, setindex!, getproperty, length, lastindex, iterate, show, isapprox, eltype, show, ==
 
-function keypair(m::Minuit, key::Union{Int, String})1
+function keypair(m::Minuit, key::Union{Int, String, Symbol})1
     if key isa Int
         1 <= key <= m.npar || throw(BoundsError("Parameter index out of range"))
         return key, m.names[key]
     else
-        ikey = findfirst(isequal(key), m.names)
+        ikey = findfirst(isequal(string(key)), m.names)
         ikey === nothing && throw(BoundsError("Parameter $key not found"))
         return ikey, key
     end

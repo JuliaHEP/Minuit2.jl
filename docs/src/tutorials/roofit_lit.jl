@@ -87,7 +87,7 @@ m = fitTo(model, data)
 # The `visualize` function is used to plot the results of the fit. It takes the `Minuit` object as input
 # and plots the data, the model and the fit results.
 
-visualize(m, legend=:topleft)
+visualize(m; legend=:topleft)
 
 # We can also visualize the different components of the model overlaid on the data.
 

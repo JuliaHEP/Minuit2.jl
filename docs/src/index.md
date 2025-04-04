@@ -6,6 +6,8 @@ Julia bindings for the [**Minuit2**](https://root.cern/root/htmldoc/guides/minui
 
 The API and additional features of this package are heavily inspired by [iminuit](https://scikit-hep.org/iminuit/), which offers a Python-friendly interface to the same library.
 
+We have provided an additional module `Minuit2.RooFit` with an initial implementation in Julia of the [RooFit](https://root.cern/manual/roofit/) modeling package often used in HEP data analysis. This package can help to build complex PDF models using basic elements and combining them.
+
 ## Installation
 The Minuit2.jl package does no require any special installation. Stable releases are registered into the Julia general registry, and therefore can be deployed with the standard `Pkg` Julia package manager.
 ```julia
@@ -71,6 +73,39 @@ julia> ex, ey = m.errors
 [1.0037197729944198, 2.009856810740231]
 ```
 
+### Minuit2.RooFit module
+
+This is simple example of the functionality of the `Minuit2.RooFit` module provided additionally to this package.
+```Julia
+#---Observable
+mes =  RealVar(:mes, limits=(5.20, 5.30), nbins=50)
+
+#---Gaussian signal
+sigmean = RealVar(:sigmean, 5.28, limits=(5.20, 5.30))
+sigwidth = RealVar(:sigwidth, 0.0027, limits=(0.001, 0.1))
+sig = Gaussian(:sig, mes, sigmean, sigwidth)
+
+#---Build Argus background
+argpar = RealVar(:argpar, -20.0, limits=(-100., -1.))
+argus = ArgusPdf(:argus, mes, ConstVar(:m₀, 5.291), argpar)
+
+#---Build the model
+nsig = RealVar(:nsig, 200., limits=(0., 10000.))
+nbkg = RealVar(:nbkg, 800., limits=(0., 10000.))
+model = AddPdf(:model, [sig, argus], [nsig, nbkg])
+
+#--- Generate a toyMC sample from composite PDF ---
+data = generate(model, 2000)
+
+#--- Perform extended unbinned NLL fit ---
+m = fitTo(model, data)
+
+#--- Visualize the results
+visualize(m, model, components=(:sig, :argus); nbins=50, linestyle=:dash, legend=:topleft)
+```
+![](RooFit-1.png)
+
+
 ## Examples
 Some notebooks are provided as examples. They are located in directory `examples`. They can be run using Julia to launch the notebook or jupyterlab. 
 
@@ -87,6 +122,12 @@ Basic introduction to minimization with Minuit using simple Julia functions and 
 
 ### costfunction.ipynb
 Introduction of the provided cost functions for a typical HEP minimization problem. 
+
+### combined.ipynb
+A quick guide on how to combined several fits into a single one using the Minuit2 package.
+
+### roofit.ipynb
+A quick guide on how to use the RooFit module to perform fits.
 
 
 ## Tests
