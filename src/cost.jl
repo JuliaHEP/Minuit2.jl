@@ -558,7 +558,7 @@ mutable struct ExtendedBinnedNLL{T<:Real,N,F<:Function} <: BinnedCostFunction{T,
 end
 
 """
-ExtendedBinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tuple}, cdf::Function; use_pdf=:none, verbose=0,  grad=nothing, names=())
+       ExtendedBinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tuple}, cdf::Function; use_pdf=:none, verbose=0,  grad=nothing, names=())
 
 Binned extended negative log-likelihood.
 
