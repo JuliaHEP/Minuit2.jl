@@ -155,7 +155,7 @@ migrad!(m)
 # into account, which works even if bins have zero entries. Using more bins than necessary just 
 # increases the computational cost.
 # 
-# Instead of a `pdf``, you need to provide a `cdf`` for a binned fit in order to better calculate
+# Instead of a `pdf`, you need to provide a `cdf` for a binned fit in order to better calculate
 # the probability of the data. The difference of `cdf` at the bin edges is the integral of the 
 # `pdf` over the bin range. In this example we use `Hist1D` from FHist.jl to create the histogram
 # and the `BinnedNLL` cost function. Other histogram types are also possible.
