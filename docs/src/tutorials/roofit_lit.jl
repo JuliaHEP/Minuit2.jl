@@ -35,11 +35,11 @@ x = RealVar(:x, 0., limits=(-5., 5.)) # Create a RooRealVar for x
 gaus = Gaussian(:gaus, x, μ, σ) # Create a RooGaussian PDF
 
 # We can just plot the PDF with the default parameters.
-visualize(gaus)
+plot(gaus)
 
 # which is equivalent to the following code:
 # ```julia
-# plot(x->gaus(x), x.limits..., label="gaus")
+# plot(x->gaus(x, (p.value for p in gaus.params)...), x.limits..., label="gaus")
 # ```
 
 # Lets now generate some data from the PDF.
@@ -47,10 +47,10 @@ visualize(gaus)
 data = generate(gaus, 1000); # Generate 1000 observations from the model PDF
 
 # Lets fit the data with an `UnbinnedNLL` cost function. It returns a `Minuit` object.
-m = fitTo(gaus, data)
+result = fitTo(gaus, data);
 
 # Lets now plot the data and the PDF with the fitted parameters.
-visualize(m)
+plot(result)
 
 # ## Combining several PDFs to create a model
 # Here is a first example of model defined in RooFit that is subsequently used for event generation, an
@@ -61,7 +61,7 @@ visualize(m)
 # them with the number of events in each category.
 
 ##---Observable
-mes =  RealVar(:mes, limits=(5.20, 5.30), nbins=50)
+mes =  RealVar(:mes, 0.0, limits=(5.20, 5.30), nbins=30)
 
 ##---Gaussian signal
 sigmean = RealVar(:sigmean, 5.28, limits=(5.20, 5.30))
@@ -81,17 +81,17 @@ model = AddPdf(:model, [sig, argus], [nsig, nbkg])
 data = generate(model, 2000)
 
 ##--- Perform extended NLL fit ---
-m = fitTo(model, data)
+result = fitTo(model, data);
 
 # ### Visualize the results
-# The `visualize` function is used to plot the results of the fit. It takes the `Minuit` object as input
+# The `plot` function is used to plot the results of the fit. It takes the `Minuit` object as input
 # and plots the data, the model and the fit results.
 
-visualize(m; legend=:topleft)
+plot(result; legend=:topleft)
 
 # We can also visualize the different components of the model overlaid on the data.
 
-visualize(m, model, components=(:sig, :argus); nbins=50, linestyle=:dash, legend=:topleft)
+plot(result, components=(:sig, :argus), legend=:topleft)
 
 # ## Combining several PDFs to create a model sharing some variables
 # We define a model with two signal distributions and a background distribution.
@@ -105,7 +105,7 @@ visualize(m, model, components=(:sig, :argus); nbins=50, linestyle=:dash, legend
 # - `f_sig1` and `f_bkg` are the fractions of the signal and background distributions.
 
 ## Define the observable
-x =  RealVar(:x, limits=(0., 10.), nbins=20)
+x =  RealVar(:x, 0., limits=(0., 10.), nbins=20)
 
 ## Define the two signals with different widths
 μ = RooFit.RealVar(:μ, 3., limits=(0., 5.))
@@ -132,16 +132,16 @@ data = RooFit.generate(model, N);
 # For this example, we will use the `UnbinnedNLL` cost function to fit the data.
 # We will use the `Minuit` optimizer to minimize the cost function.
 
-m = fitTo(model, data)
+result = fitTo(model, data);
 
 # Visualize the results the results and the different components of the model. The `pdf` needs to be
 # scaled to the number of events in the data and the bin widths and this is done automatically
 
-visualize(m, model)
+plot(result)
 
 # We can also visualize the components of the overall model
 
-visualize(m, model, components=[:bkg, :sig1, :sig2], fill=0, alpha=0.4)
+plot(result, components=[:bkg, :sig1, :sig2], legend=:topright)
 
 
 # ### Fit the data with BinnedNLL
@@ -149,23 +149,23 @@ visualize(m, model, components=[:bkg, :sig1, :sig2], fill=0, alpha=0.4)
 # number of bins defined in the variable `x`.
 
 N = 2000
-data = RooFit.generateBinned(model, N);
+data = RooFit.generate(model, N, nbins=50);
 
 # The generated `data` in this case is directly an `Hist1D` object.
-plot(data, label="data", c=:blue)
+plot(data.data, label="data", c=:blue)
 
 # and fit the data with the `BinnedNLL` cost function. 
 
-m = fitTo(model, data)
+result = fitTo(model, data);
 
 # Visualize the results together with the components
 
-visualize(m, model, components=[:bkg, :sig1, :sig2], fill=0, alpha=0.4)
+plot(result, components=[:bkg, :sig1, :sig2], legend=:topright)
 
 # Finally we can also show the profile of the likelihood for the parameters of interest.
 # The `draw_mncontour` function is used to plot the contours of the likelihood function in the parameter space.
 
-draw_mncontour(m, :c, :μ)
+draw_mncontour(result.engine, :c, :μ)
 
 
 

@@ -2,14 +2,15 @@ module RooFit
 
 import Distributions: UnivariateDistribution, Exponential as _Exponential, Normal as _Normal, Uniform as _Uniform, pdf, cdf, truncated
 import FHist: Hist1D, AbstractHistogram
-import StatsBase: wsample
+import StatsBase: wsample, mean, std
 import Minuit2: ArgusBGDist, ChebyshevDist, BinnedNLL, ExtendedBinnedNLL, UnbinnedNLL, ExtendedUnbinnedNLL, CostFunction, Minuit, migrad!
 import Base: getproperty, setproperty!, show, isconst, getindex, setindex!
+import Random: AbstractRNG, default_rng
 
 
-export AbstractPdf, RealVar, ConstVar
+export AbstractPdf, AbstractData, RealVar, ConstVar, DataSet, AbstractHistogram, FitResult
 export Gaussian, Exponential, ArgusPdf, Chebyshev
-export AddPdf, generate, generateBinned
+export AddPdf, generate, distribution
 export minuitkwargs, fitTo
 
 #--------------------------------------------------------------------------------------------------
@@ -39,6 +40,8 @@ function getproperty(d::AbstractPdf, name::Symbol)
 end
 (model::AbstractPdf)(x) = model.pdf(x, (p.value for p in model.params)...)
 show(io::IO, d::AbstractPdf) = print(io, "$(nameof(typeof(d))){$(d.name)} PDF with parameters $([p.name for p in d.params])")
+mean(d::AbstractPdf) = mean(distribution(d))
+std(d::AbstractPdf) = std(distribution(d))
 function minuitkwargs(d::AbstractPdf; randomize=false)
     function value(p)
         if randomize
@@ -53,64 +56,22 @@ function minuitkwargs(d::AbstractPdf; randomize=false)
     Dict(Symbol(:limit_, p.name)  => p.limits for p in d.params))
 end
 """
-    generateBinned(d::AbstractPdf, n=1000)
-
-Generate `n` random numbers from a binned distribution `d`.
-"""
-generateBinned(d::AbstractPdf, n=1000) = Hist1D(generate(d, n), binedges=range(d.x.limits..., d.x.nbins+1))
-
-"""
-    generate(d::AbstractPdf, n=1000)
+    generate(d::AbstractPdf, n::Integer=1000; nbins=0)
 
 Generate `n` random numbers from a distribution `d`.
 """
-generate(d::AbstractPdf, n::Integer) = rand(d.distribution, n)
-generate(d::AbstractPdf) = rand(d.distribution)
-"""
-    fitTo(d::AbstractPdf, data)
-
-Fit a distribution `d` to a data set `data`.
-"""
-function fitTo(d::AbstractPdf, data)
-    # Check if the data is binned or unbinned
-    if data isa AbstractHistogram
-        if d.extendable
-            cost = ExtendedBinnedNLL(data, d.pdf, use_pdf=:approximate)
-        else
-            cost = BinnedNLL(data, d.pdf, use_pdf=:approximate)
-        end
-    elseif(data isa AbstractArray)
-        if !isnothing(d.extendable) && d.extendable 
-            # Need to change the model function to include the integral
-            fname = gensym("$(d.name)_ext_pdf")
-            pdf = eval( quote
-                function $(fname)(x, $((param.name for param in d.params)...))
-                    +($((f.name for f in d.fractions)...)), $(d.pdf)(x, $((param.name for param in d.params)...))
-                end
-            end )
-            cost = ExtendedUnbinnedNLL(data, pdf)
-        else
-            cost = UnbinnedNLL(data, d.pdf)
-        end
+function generate(d::AbstractPdf, n::Int64; nbins=0)
+    nbins = nbins > 0 ? nbins : d.x.nbins > 0 ? d.x.nbins : 0
+    if nbins > 0
+        data = Hist1D(rand(default_rng(), d, n), binedges=range(d.x.limits..., nbins+1))
     else
-        throw(ArgumentError("Data type not supported"))
+        data = rand(default_rng(), d, n)
     end
-    # Create a Minuit object with the cost function and initial parameter values
-    m = Minuit(cost; minuitkwargs(d)...)
-    # Run the minimization
-    migrad!(m)
-    # Check if the fit was successful
-    if m.is_valid
-        # Update the parameters of the distribution with the fitted values
-        for (param, value) in zip(d.params, m.values)
-            param.value = value
-        end
-        # Return the fitted distribution
-        return m
-    else
-        throw(ArgumentError("Fit failed"))
-    end
-end     
+    DataSet(data, (d.x,))
+end
+function Base.rand(rng::AbstractRNG, d::AbstractPdf, n::Int64=1)
+    return rand(rng, distribution(d), n)
+end
 
 #--------------------------------------------------------------------------------------------------
 #---RealVar type-----------------------------------------------------------------------------------
@@ -122,18 +83,22 @@ Entity to represent a real variable with a name, value, limits and number of bin
 mutable struct RealVar{T<:Real}
     const name::Symbol
     value::T
+    error::T
     const limits::Tuple{T, T}
     nbins::Int
     const isconst::Bool
 end
 
 """
-    RealVar(name, value=0.;  limits=(-Inf,Inf), nbins=50)
+    RealVar(name, value=0.;  limits=(-Inf,Inf), nbins=0)
 
 Construct a RealVar with a name, value, limits and number of bins.
 """
-function RealVar(name, value::T=0.; limits=(-Inf,Inf), nbins=50) where T<:Real
-    RealVar{T}(name, value, limits, nbins, false)
+function RealVar(name, value::T=T(0), error::T=T(0); limits=(-Inf,Inf), nbins=0) where T<:Real
+    RealVar{T}(name, value, error, limits, nbins, false)
+end
+function RealVar{T}(name, value=0, error=0; limits=(-Inf,Inf), nbins=0) where T<:Real
+    RealVar{T}(name, value, error, limits, nbins, true)
 end
 function setproperty!(v::RealVar{T}, name::Symbol, value) where T<:Real
     if name == :value
@@ -149,6 +114,11 @@ function setproperty!(v::RealVar{T}, name::Symbol, value) where T<:Real
         else
             setfield!(v, name, T(value))
         end
+    elseif name == :error
+        setfield!(v, name, T(value))
+    elseif name == :measurement
+        setfield!(v, :value, value(value))
+        setfield!(v, :error, uncertainty(value))
     else
         throw(ArgumentError("Field $(name) not found in $(nameof(typeof(v)))"))
     end
@@ -162,10 +132,83 @@ isconst(v::RealVar) = v.isconst
 Construct a ConstVar with a name ans value.
 """
 function ConstVar(name, value::T) where T<:Real
-    RealVar{T}(name, value, (value,value), 0, true)
+    RealVar{T}(name, value, 0, (value,value), 0, true)
 end
 function ConstVar(value::T=0.) where T<:Real
-    RealVar{T}(:none, value, (value,value), 0, true)
+    RealVar{T}(:none, value, 0, (value,value), 0, true)
+end
+
+#--------------------------------------------------------------------------------------------------
+#---DataSet type-----------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
+abstract type AbstractData end
+"""
+    DataSet
+DataSet is a container for a set of data points.
+"""
+struct DataSet{T<:Real,N} <: AbstractData
+    data::Union{Array{T,N}, AbstractHistogram}
+    observables::NTuple{N, RealVar{T}}
+end
+#--------------------------------------------------------------------------------------------------
+#---FitResult type-----------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
+"""
+    FitResult
+FitResult is a container for the result of a fit.
+"""
+struct FitResult
+    data::DataSet
+    model::AbstractPdf
+    engine
+end
+
+"""
+    fitTo(d::AbstractPdf, data)
+
+Fit a distribution `d` to a data set `data`.
+"""
+function fitTo(model::AbstractPdf, ds)
+    data = ds isa DataSet ? ds.data : ds
+    # Check if the data is binned or unbinned
+    if data isa AbstractHistogram
+        if !isnothing(model.extendable) && model.extendable
+            cost = ExtendedBinnedNLL(data, model.pdf, use_pdf=:approximate)
+        else
+            cost = BinnedNLL(data, model.pdf, use_pdf=:approximate)
+        end
+    elseif(data isa AbstractArray)
+        if !isnothing(model.extendable) && model.extendable 
+            # Need to change the model function to include the integral
+            fname = gensym("$(model.name)_ext_pdf")
+            pdf = eval( quote
+                function $(fname)(x, $((param.name for param in model.params)...))
+                    +($((f.name for f in model.fractions)...)), $(model.pdf)(x, $((param.name for param in model.params)...))
+                end
+            end )
+            cost = ExtendedUnbinnedNLL(data, pdf)
+        else
+            cost = UnbinnedNLL(data, model.pdf)
+        end
+    else
+        throw(ArgumentError("Data type not supported"))
+    end
+    # Create a Minuit object with the cost function and initial parameter values
+    m = Minuit(cost; minuitkwargs(model)...)
+    # Run the minimization
+    migrad!(m)
+    # Check if the fit was successful
+    if m.is_valid
+        # Update the parameters of the distribution with the fitted values
+        for (param, value, error) in zip(model.params, m.values, m.errors)
+            param.value = value
+            param.error = error
+        end
+        # Return the fitted distribution
+        return FitResult(ds, model, m)
+    else
+        throw(ArgumentError("Fit failed"))
+    end
 end
 
 
@@ -178,7 +221,6 @@ struct Gaussian{T<:Real, PDF<:Function} <: AbstractPdf
     μ::RealVar{T}
     σ::RealVar{T}
     params::Tuple{Vararg{RealVar{T}}}
-    distribution::UnivariateDistribution
     pdf::PDF
 end
 """
@@ -202,11 +244,9 @@ function Gaussian(name, x, μ, σ)
                         ifelse.($(a) .<= x .<= $(b), pdf.(d, x) ./ scale, zero(x)) 
                     end
                 end )
-    dist = truncated(_Normal(μ.value, σ.value), a, b)
-    Gaussian(name, x, μ, σ, params, dist, pdf)
+    Gaussian(name, x, μ, σ, params, pdf)
 end
-
-#
+distribution(d::Gaussian) = truncated(_Normal(d.μ.value, d.σ.value), d.x.limits...)#
 #---Exponential distribution---------------------------------------------------------------
 #
 struct Exponential{T<:Real,PDF<:Function} <: AbstractPdf
@@ -214,7 +254,6 @@ struct Exponential{T<:Real,PDF<:Function} <: AbstractPdf
     x::RealVar{T}
     c::RealVar{T}
     params::Tuple{Vararg{RealVar{T}}}
-    distribution::UnivariateDistribution
     pdf::PDF
 end
 """
@@ -240,9 +279,9 @@ function Exponential(name, x, c)
                         ifelse.($(a) .<= x .<= $(b), pdf.(d, x) ./ scale, zero(x)) 
                     end
                 end )
-    dist = truncated(_Exponential(-1/c.value), a, b)
-    Exponential(name, x, c, params, dist, pdf)
+    Exponential(name, x, c, params,pdf)
 end
+distribution(d::Exponential) = truncated(_Exponential(-1/d.c.value), d.x.limits...)
 
 #
 #---ArgusPdf distribution---------------------------------------------------------------
@@ -254,7 +293,6 @@ struct ArgusPdf{T<:Real,PDF<:Function} <: AbstractPdf
     c::RealVar{T}
     p::RealVar{T}
     params::Tuple{Vararg{RealVar{T}}}
-    distribution::UnivariateDistribution
     pdf::PDF
 end
 """
@@ -281,16 +319,15 @@ function ArgusPdf(name, m, m₀, c, p=ConstVar(:p, 0.5))
                         ifelse.($(a) .<= x .<= $(b), pdf.(d, x), zero(x))
                     end
                 end )
-    dist = ArgusBGDist(m₀.value, c.value, p.value, a, b)
-    ArgusPdf(name, m, m₀, c, p, params, dist, pdf)
+    ArgusPdf(name, m, m₀, c, p, params, pdf)
 end
+distribution(d::ArgusPdf) = truncated(ArgusBGDist(d.m₀.value, d.c.value, d.p.value), d.x.limits...)
 
 #---Chebyshev distribution-------------------------------------------------------------------------
 struct Chebyshev{T<:Real,PDF<:Function} <: AbstractPdf
     name::Symbol
     x::RealVar{T}
     params::Tuple{Vararg{RealVar{T}}}
-    distribution::UnivariateDistribution
     pdf::PDF
 end
 """
@@ -312,9 +349,9 @@ function Chebyshev(name, x, coeffs)
                         pdf.(d, x)
                     end
                 end )
-    dist = ChebyshevDist([c.value for c in coeffs], a, b)
     Chebyshev(name, x, params, dist, pdf)
 end
+distribution(d::Chebyshev) = ChebyshevDist([c.value for c in d.coeffs], d.x.limits...)
 
 #--------------------------------------------------------------------------------------------------
 #---AddPdf distribution----------------------------------------------------------------------------
@@ -362,9 +399,6 @@ function AddPdf(name, pdfs, coefs)
         throw(ArgumentError("Number of pdfs and coefficients are inconsistent"))
     end
     pdf = eval( quote
-                    function $(fname)(x)
-                        $(fname)(x, $((param.value for param in params)...))
-                    end
                     function $(fname)(x, $((param.name for param in params)...))
                         $(body)
                     end
@@ -380,30 +414,15 @@ function AddPdf(name, pdf1::AbstractPdf, pdf2::AbstractPdf, fraction::RealVar)
     AddPdf(name, [pdf1, pdf2], [fraction])
 end
 show(io::IO, d::AddPdf) = print(io, "$(nameof(typeof(d))){$(join(map(x -> "$(x.name)", d.pdfs), ", "))} PDF with parameters $([p.name for p in d.params])")
-function generate(d::AddPdf, n::Integer)
+function Base.rand(rng::AbstractRNG, d::AddPdf, n::Int64=1)
     len = length(d.pdfs)
-    if d.recursive
-        r = []
-        for i in 1:len
-            pdf, w = d[i]
-            m = Int(round(n * w))
-            push!(r, generate(pdf, m))
-        end
-        return vcat(r...)
-    else   # d.extendable
-        map(wsample(eachindex(d.pdfs), [f.value for f in d.fractions], n)) do i
-            generate(d.pdfs[i])
-        end
+    r = []
+    for i in 1:len
+        pdf, w = d[i]
+        m = Int(round(n * w))
+        push!(r, rand(rng, pdf, m))
     end
-end
-function _generate(index, d::AddPdf, n=1000)
-    if index == lastindex(d.pdfs)
-        return generate(d.pdfs[index], n)
-    else
-        n1 = Int(n * d.fractions[index].value)
-        n2 = n - n1
-        return vcat(generate(d.pdfs[index], n1), _generate(index+1, d, n2))
-    end
+    return vcat(r...)
 end
 function get_coefficients(c)
     s = []
@@ -427,7 +446,8 @@ function getindex(d::AddPdf, idx::Integer)
         end
         return d.pdfs[idx], f
     else
-        return d.pdfs[idx], d.fractions[idx].value
+        total = sum(f.value for f in d.fractions)
+        return d.pdfs[idx], d.fractions[idx].value/total
     end
 end
 function getindex(d::AddPdf, c::Symbol)

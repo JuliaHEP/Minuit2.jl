@@ -13,7 +13,8 @@ function process_literate(names...)
 end
 
 basic_mds    = process_literate("introduction", "costfunctions")
-advanced_mds = process_literate("combined", "roofit")
+advanced_mds = process_literate("combined")
+rootfit_mds = process_literate("roofit", "roofit_basics")
 
 makedocs(;
     modules=[Minuit2, Minuit2.RooFit],
@@ -27,7 +28,8 @@ makedocs(;
         "Introduction" => "index.md",
         "Public API" => "api.md",
         "Tutorials" => [ "Basic" => basic_mds,
-                        "Advanced" => advanced_mds],
+                        "Advanced" => advanced_mds,
+                        "RooFit" => rootfit_mds],
         "Release Notes" => "release_notes.md",
     ],
     checkdocs=:exports,
