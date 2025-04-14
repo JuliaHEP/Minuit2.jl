@@ -8,16 +8,16 @@ x = RealVar(:x, 0., limits=(-5., 5.)) # Create a RooRealVar for x
 σ = RealVar(:σ, 1., limits=(0.1, 5.)) # Create a RooRealVar for σ
 gaus = Gaussian(:gaus, x, μ, σ) # Create a RooGaussian PDF
 
-visualize(gaus)
+plot(gaus)
 
 data = generate(gaus, 1000); # Generate 1000 observations from the model PDF
 
-m = fitTo(gaus, data)
+result = fitTo(gaus, data);
 
-visualize(m)
+plot(result)
 
 ##---Observable
-mes =  RealVar(:mes, limits=(5.20, 5.30), nbins=50)
+mes =  RealVar(:mes, 0.0, limits=(5.20, 5.30), nbins=30)
 
 ##---Gaussian signal
 sigmean = RealVar(:sigmean, 5.28, limits=(5.20, 5.30))
@@ -37,14 +37,14 @@ model = AddPdf(:model, [sig, argus], [nsig, nbkg])
 data = generate(model, 2000)
 
 ##--- Perform extended NLL fit ---
-m = fitTo(model, data)
+result = fitTo(model, data);
 
-visualize(m; legend=:topleft)
+plot(result; legend=:topleft)
 
-visualize(m, model, components=(:sig, :argus); nbins=50, linestyle=:dash, legend=:topleft)
+plot(result, components=(:sig, :argus), legend=:topleft)
 
 # Define the observable
-x =  RealVar(:x, limits=(0., 10.), nbins=20)
+x =  RealVar(:x, 0., limits=(0., 10.), nbins=20)
 
 # Define the two signals with different widths
 μ = RooFit.RealVar(:μ, 3., limits=(0., 5.))
@@ -66,19 +66,19 @@ model =  RooFit.AddPdf(:model, [bkg, sig1, sig2], [f_bkg, f_sig1])
 N = 2000
 data = RooFit.generate(model, N);
 
-m = fitTo(model, data)
+result = fitTo(model, data);
 
-visualize(m, model)
+plot(result)
 
-visualize(m, model, components=[:bkg, :sig1, :sig2], fill=0, alpha=0.4)
+plot(result, components=[:bkg, :sig1, :sig2], legend=:topright)
 
 N = 2000
-data = RooFit.generateBinned(model, N);
+data = RooFit.generate(model, N, nbins=50);
 
-plot(data, label="data", c=:blue)
+plot(data.data, label="data", c=:blue)
 
-m = fitTo(model, data)
+result = fitTo(model, data);
 
-visualize(m, model, components=[:bkg, :sig1, :sig2], fill=0, alpha=0.4)
+plot(result, components=[:bkg, :sig1, :sig2], legend=:topright)
 
-draw_mncontour(m, :c, :μ)
+draw_mncontour(result.engine, :c, :μ)
