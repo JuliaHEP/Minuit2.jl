@@ -1,9 +1,20 @@
 
 # Release Notes
 
-## 0.3.0 (04-04-2025)
+## 0.4.0
+### Breaking changes
+- To instantiate a `RealVar` requires a initial value to deduce the `T` or to specify the parameter `T` with `RealVar{Float64}` for example.
+- Removed function `RooFit.generateBinned`. The data is generated binned if nbins > 0 in the observable variable.
+- The function `RooFi.generate` returns a `DataSet`
+
 ### Fixes
 - 
+### Additions
+- Added `error` in the definition of `RealVar`
+- Added roofit_basics tutorial
+- Plotting is done by using macro `@recipe` of module `RecipesBase`
+
+## 0.3.0 (04-04-2025)
 ### Additions
 - Extended cost functions `ExtendedBinnedNLL` and `ExtendedUnbinnedNLL`.
   - Added examples in `costfunctions` example
