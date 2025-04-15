@@ -219,7 +219,7 @@ are started by calling the corresponding methods.
 - `method::Symbol` : The minimization algorithm to use. Possible values are `:migrad`, `:simplex`
 - `maxfcn::Int` : Maximum number of function calls. If set to 0, Minuit will use a default value.
 - `tolerance::Real` : Tolerance for the minimization. If set to 0, Minuit will use a default value.
-    - `arraycall::Bool`: If the function takes a single argument which can be an array or takes multiple arguments. If not provided, Minuit will try to detect it via reflection. See [`get_nargs`](@ref).
+- `arraycall::Bool`: If the function takes a single argument which can be an array or takes multiple arguments. If not provided, Minuit will try to detect it via reflection. See [`get_nargs`](@ref).
 - `kwargs` : Additional keyword arguments. Starting values for the minimization as keyword arguments. See notes for details on how
   to set starting values.
 
