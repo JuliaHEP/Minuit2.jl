@@ -193,7 +193,8 @@ end
 
 
 """
-    Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, tolerance=0, strategy=1,  kwargs...)
+    Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limits=(), fixed=(), method=:migrad, maxfcn=0, 
+                tolerance=0.1, precision=nothing, strategy=1, kwargs...)
 
 Initialize a Minuit object.
 
@@ -212,6 +213,9 @@ are started by calling the corresponding methods.
   value required to change the function value by `errordef`. Normally, for chisquared fits it is 1, and for negative log likelihood,
   its value is 0.5. If the user wants instead the 2-sigma errors for chisquared fits, it becomes 4, as `Chi2(x+n*sigma) = Chi2(x) + n*n`.
 - `names::Vector{String}` : Names of the parameters. If not provided, Minuit will try to extract the names from the function signature.
+- `limits::AbstractArray` : Limits for the parameters. If not provided, Minuit will use no limits for all parameters.
+- `fixed::AbstractArray` : Fixed status of the parameters. If not provided, Minuit will use `false` for all parameters.
+  The limits are a tuple of two values, the lower and upper limit. If the parameter is fixed, the limits are set to `(-Inf, Inf)`.
 - `method::Symbol` : The minimization algorithm to use. Possible values are `:migrad`, `:simplex`
 - `maxfcn::Int` : Maximum number of function calls. If set to 0, Minuit will use a default value.
 - `tolerance::Real` : Tolerance for the minimization. If set to 0, Minuit will use a default value.
@@ -280,7 +284,7 @@ Setting the values with keywords is not possible in this case. Minuit
 deduces the number of parameters from the length of the initialization
 sequence.
 """
-function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), method=:migrad, maxfcn=0, 
+function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limits=(), fixed=(), method=:migrad, maxfcn=0, 
                 tolerance=0.1, precision=nothing, strategy=1, kwargs...)
     if fcn isa CostFunction
         cost = fcn
@@ -323,8 +327,9 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), meth
         ei = i > length(error) ? haskey(kwargs, Symbol("error_", name)) ? kwargs[Symbol("error_", name)] : 0.1 : error[i]
         xi = x0[i]
         Add(userpars, name, xi, ei)
-        if haskey(kwargs, Symbol("limit_", name))
-            limit = kwargs[Symbol("limit_", name)]
+        #---Get the limits, first if the user provided them, then from the keyword arguments----------------
+        limit = i > length(limits) ? haskey(kwargs, Symbol("limit_", name)) ? kwargs[Symbol("limit_", name)] : nothing : limits[i]
+        if limit !== nothing
             if limit[1] == -Inf
                 SetUpperLimit(userpars, i-1, limit[2])
             elseif limit[2] == Inf
@@ -333,7 +338,9 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), meth
                 SetLimits(userpars, i-1, limit[1], limit[2])
             end
         end
-        haskey(kwargs, Symbol("fix_", name)) && Fix(userpars, i-1)
+        if i <= length(fixed) && fixed[i] || haskey(kwargs, Symbol("fix_", name))
+            Fix(userpars, i-1)
+        end
     end
     names = [Name(userpars, i-1) for i in 1:npar]
     Minuit(funcname, cost, jf, x0, npar, names, method, tolerance, precision, strategy, userpars, userpars, nothing, nothing, nothing, 0.0)

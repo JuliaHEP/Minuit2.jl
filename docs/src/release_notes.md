@@ -8,7 +8,8 @@
 - The function `RooFi.generate` returns a `DataSet`
 
 ### Fixes
-- 
+- Issue #15. Minhit API: Added keyword arguments for `limits` and `fixed`. 
+  
 ### Additions
 - Added `error` in the definition of `RealVar`
 - Added roofit_basics tutorial

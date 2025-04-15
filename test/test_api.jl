@@ -64,6 +64,21 @@
         @test m1.strategy == 2
         @test m1.tolerance == 1e-3
 
+        m2 = Minuit(rosenbrock, [0.0, 0.0], 
+                    error=[0.1, 0.2], 
+                    fixed=[false, true], 
+                    limits=[(-1, 1), (0, 10)],
+                    errordef=0.5, strategy=2, tolerance=1e-3)
+        @test m2.npar == 2
+        @test m2.names == ["x", "y"]
+        @test m2.values == [0.0, 0.0]
+        @test m2.errors == [0.1, 0.2]
+        @test m2.fixed == [false, true]
+        @test m2.limits == [(-1.0, 1.0), (0.0, 10.0)]
+        @test m2.fcn.up == 0.5
+        @test m2.funcname == "rosenbrock(x, y)"
+        @test m2.method == :migrad
+
         m3 = Minuit(sphere, [1.0, 1.0, 1.0, 1.0], 
                     names=["x", "y", "z", "t"])
         @test m3.npar == 4
