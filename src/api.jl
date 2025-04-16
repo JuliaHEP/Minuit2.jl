@@ -380,10 +380,16 @@ minimum.
     but even more reliable.
 ## Keyword Parameters
 - `ncall::Int=0` : Approximate upper limit for the number of calls. If set to 0, use the adaptive heuristic from the Minuit2 library.
+
+The following two parameters controls the behavior of [`robust_low_level_fit`](@ref), which essentially tries to restart Migrad procedure
+when it fails to converge after the first iteration:
+- `iterate::Int=5` : Number of iterations to run the minimization. Default is 5.
+- `use_simplex::Bool=true` : If `true`, use the simplex algorithm in retry to find the minimum. If `false`, use the migrad algorithm.
 """
-function migrad!(m::Minuit, strategy=1; ncall=0)
+function migrad!(m::Minuit, strategy=1; ncall=0, iterate=5, use_simplex=true)
     migrad = MnMigrad(m.fcn, m.last_state, MnStrategy(strategy))
-    elapsed = @elapsed min = migrad(ncall, m.tolerance)   # calls the operator () to do the minimization
+    # elapsed = @elapsed min = migrad(ncall, m.tolerance)   # calls the operator () to do the minimization
+    elapsed = @elapsed min = robust_low_level_fit(m.fcn, m.last_state, ncall, MnStrategy(strategy), m.tolerance, m.precision, iterate, use_simplex)
     #---Update the Minuit object with the results---------------------------------------------------
     m.app = migrad
     m.method = :migrad
@@ -866,12 +872,12 @@ function robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision,
     migrad = MnMigrad(fcn, UserState(fmin), strategy)
     while !IsValid(fmin) && !HasReachedCallLimit(fmin) && iterate > 1
         if use_simplex
-            simplex = MnSimplex(fcn, State(fmin), strategy)
+            simplex = MnSimplex(fcn, UserState(fmin), strategy)
             if !isnothing(precision)
                 simplex.precision = precision
             end
             fmin = simplex(ncall, tolerance)
-            migrad = MnMigrad(fcn, State(fmin), strategy)
+            migrad = MnMigrad(fcn, UserState(fmin), strategy)
         end
         if !isnothing(precision)
             migrad.precision = precision
