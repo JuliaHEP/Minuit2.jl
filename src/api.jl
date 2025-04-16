@@ -864,6 +864,16 @@ function mnprofile(m::Minuit, var; size=30, bound=2, grid=nothing, subtract_min=
     return x, y, status
 end
 
+"""
+    robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision, iterate, use_simplex)
+
+A meta algorithm that:
+
+1. runs Migrad with user-specified configs (such as strategy and tolerance)
+2. checks if we converged
+3. if not, sets strategy=2, and start running N more iterations
+3. in each additional iteration, if `use_simplex`, runs SIMPLEX (again, think NelderMead) first, followed by a Migrad
+"""
 function robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision, iterate, use_simplex)
     migrad = MnMigrad(fcn, state, strategy)
     isnothing(precision) || SetPrecision(migrad, precision)
