@@ -1,7 +1,7 @@
 name = "Minuit2"
 uuid = "37821647-3276-4ed8-9a4e-bc9886b3c106"
 authors = ["Jan Strube <jan.strube@gmail.com>", "Pere Mato <pere.mato@cern.ch>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
@@ -31,13 +31,13 @@ Minuit2PlotsExt = ["Plots", "FHist"]
 CxxWrap = "0.16"
 Distributions = "0.25.117"
 IterTools = "1.10.0"
-LinearAlgebra = "1.11.0"
+LinearAlgebra = "1"
 Minuit2_Julia_Wrapper_jll = "0.3.0"
 Plots = "1"
 RecipesBase = "^1"
 Polynomials = "4.0.19"
 PrettyTables = "2.4.0"
-Random = "1.11.0"
+Random = "1"
 SpecialFunctions = "2.5.0"
 StatsBase = "0.34.4"
 julia = "1.9"
