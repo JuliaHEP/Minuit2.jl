@@ -219,6 +219,7 @@ are started by calling the corresponding methods.
 - `method::Symbol` : The minimization algorithm to use. Possible values are `:migrad`, `:simplex`
 - `maxfcn::Int` : Maximum number of function calls. If set to 0, Minuit will use a default value.
 - `tolerance::Real` : Tolerance for the minimization. If set to 0, Minuit will use a default value.
+- `arraycall::Bool`: If the function takes a single argument which can be an array or takes multiple arguments. If not provided, Minuit will try to detect it via reflection. See [`get_nargs`](@ref).
 - `kwargs` : Additional keyword arguments. Starting values for the minimization as keyword arguments. See notes for details on how
   to set starting values.
 
@@ -285,7 +286,7 @@ deduces the number of parameters from the length of the initialization
 sequence.
 """
 function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limits=(), fixed=(), method=:migrad, maxfcn=0, 
-                tolerance=0.1, precision=nothing, strategy=1, kwargs...)
+                tolerance=0.1, precision=nothing, strategy=1, arraycall=nothing, kwargs...)
     if fcn isa CostFunction
         cost = fcn
         jf = FCN(fcn, grad isa Bool ? grad : true) # If grad is a boolean, use it to control it
@@ -295,7 +296,9 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limi
     else
         cost = nothing        
         #---Check if the function has a list of parameters or a single array---------------------------
-        arraycall = get_nargs(fcn) == 1 && (length(x0) > 1 || length(x0[1]) > 1) ? true : false
+        if isnothing(arraycall)
+            arraycall = get_nargs(fcn) == 1 && (length(x0) > 1 || length(x0[1]) > 1) ? true : false
+        end
         #---Get the arguments names-------------------------------------------------------------------
         if names === ()
             if arraycall

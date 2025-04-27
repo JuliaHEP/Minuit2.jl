@@ -312,6 +312,11 @@ function get_argument_names(f)
     [d[1] for d in decls[2:end]]
 end
 
+"""
+    get_nargs(f)::Int
+
+Returns the number of arguments of the function `f`. The first argument is the function itself, so the number of arguments is `length(m.sig.parameters)-1`.
+"""
 function get_nargs(f)
     m = first(methods(f))
     length(m.sig.parameters)-1
