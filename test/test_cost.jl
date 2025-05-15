@@ -13,9 +13,14 @@ using FHist
         x = rand(Normal(0, 1), 1000)
         return x, (mean(x), std(x), length(x)) 
     end
-    function binned()
+    function binned(uniform=true)
         x, (μ, σ, n) = unbinned()
-        h = Hist1D(x, binedges = range(-3, 3, 51))
+        if uniform
+            bins = range(-3, 3, 51)
+        else
+            bins = [-3., -2.6, -2.2, -1.8, -1.4, range(-1, 1 ,41)..., 1.4, 1.8, 2.2, 2.6, 3.0]
+        end
+        h = Hist1D(x, binedges = bins)
         return bincounts(h), binedges(h), (μ, σ)
     end
 
@@ -39,6 +44,7 @@ using FHist
     end
 
     glabel(x) = x ? "_grad" : ""
+    ulabel(x) = x ? "_uniform" : ""
 
     @testset "UnbinnedNLL$model$(glabel(use_grad))" for model in (_pdf, _logpdf,), use_grad in (false, true)
         x, (μ, σ, n) = unbinned()
@@ -97,8 +103,8 @@ using FHist
 
     end
 
-    @testset "BinnedNLL$(glabel(use_grad))_$use_pdf" for use_grad in (false, true), use_pdf in (:none, :approximate)
-        nx, xe , (μ, σ)= binned()
+    @testset "BinnedNLL$(glabel(use_grad))_$(use_pdf)$(ulabel(uniform))" for use_grad in (false, true), use_pdf in (:none, :approximate), uniform in (true, false)
+        nx, xe , (μ, σ)= binned(uniform)
         model = use_pdf == :none ? _cdf : _pdf
         cost = BinnedNLL(nx, xe, model, grad=numerical_model_gradient(model), use_pdf=use_pdf)
         @test cost.ndata == length(nx)
@@ -216,7 +222,7 @@ using FHist
         end
     end
 
-    @testset "BinnedNLL_2D$(glabel(use_grad))_$use_pdf" for use_grad in (false, true), use_pdf in (:approximate,)
+    @testset "BinnedNLL_2D$(glabel(use_grad))_$(use_pdf)$(ulabel(uniform))" for use_grad in (false, true), use_pdf in (:approximate,), uniform in (true, false)
         if use_pdf == :none
             model = (xy, μx, μy, σx, σy, ρ) -> cdf(mvnorm(μx, μy, σx, σy, ρ), xy |> collect)
         else
@@ -224,7 +230,12 @@ using FHist
         end
         truth = 0.1, 0.2, 0.3, 0.4, 0.5
         xy = rand(mvnorm(truth...), 1000)
-        h2 = Hist2D((xy[1,:], xy[2,:]), binedges = (range(-2, 2, 51), range(-2, 2, 51)))
+        if uniform
+            edges = range(-2, 2, 51)
+        else
+            edges = [-2., -1.8, -1.6, -1.4, -1.2, range(-1, 1 ,41)..., 1.2, 1.4, 1.6, 1.8, 2.0]
+        end
+        h2 = Hist2D((xy[1,:], xy[2,:]), binedges = (edges, edges))
         cost = BinnedNLL(h2, model, use_pdf=use_pdf, grad=numerical_model_gradient(model))
         @test cost.ndata == length(h2.bincounts)
 

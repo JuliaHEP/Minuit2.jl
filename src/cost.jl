@@ -5,7 +5,7 @@
 #-------------------------------------------------------------------------------------------
 import IterTools
 abstract type CostFunction end
-import Base: getproperty, setproperty!, propertynames, show, getindex, length
+import Base: getproperty, setproperty!, propertynames, show, getindex, length, isapprox
 export LeastSquares, Constant, CostFunction, UnbinnedCostFunction, BinnedCostFunction,
        BaseCost, UnbinnedNLL, BinnedNLL, ExtendedUnbinnedNLL, ExtendedBinnedNLL
 export value, grad, has_grad
@@ -218,6 +218,7 @@ loweredges(edges::AbstractVector) = [edges[i] for i in 1:length(edges)-1]
 loweredges(edges::Tuple) = Iterators.product([loweredges(e) for e in edges]...) |> collect
 upperedges(edges::AbstractVector) = [edges[i+1] for i in 1:length(edges)-1]
 upperedges(edges::Tuple) = Iterators.product([upperedges(e) for e in edges]...) |> collect
+isapprox(x::Tuple, y::Tuple) = all(isapprox.(x,y))
 
 #---Abstract Unbinned cost function----------------------------------------------------------------
 abstract type UnbinnedCostFunction <: CostFunction end
@@ -465,6 +466,7 @@ mutable struct BinnedNLL{T<:Real,N,F<:Function} <: BinnedCostFunction{T,N}
     binwidths::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
     loweredges::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
     upperedges::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
+    uniform::Bool
 end
 
 """
@@ -506,15 +508,16 @@ function BinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArray, Tupl
         widths = binwidths(binedges)
         ledges = loweredges(binedges)
         uedges = upperedges(binedges)
+        uniform = all(x -> isapprox(x, widths[1]), widths)
     else
         throw(ArgumentError("unknown use_pdf: $use_pdf"))
     end
-    BinnedNLL{T,ndim,F}(BaseCost(verbose, params), bincounts, cdf, grad, use_pdf, sum(bincounts), centers, widths, ledges, uedges)
+    BinnedNLL{T,ndim,F}(BaseCost(verbose, params), bincounts, cdf, grad, use_pdf, sum(bincounts), centers, widths, ledges, uedges, uniform)
 end
 
 function _pred(cost::BinnedCostFunction, args)
     if cost.use_pdf == :approximate
-        f = cost.model.(cost.bincenters, args...) .* prod(cost.binwidths[1])
+        f = cost.model.(cost.bincenters, args...) .* (cost.uniform ? prod(cost.binwidths[1]) : prod.(cost.binwidths))
     else
         f = cost.model.(cost.upperedges, args...) .- cost.model.(cost.loweredges, args...)
         f[f .<= 0] .= F64_TINY
@@ -524,7 +527,7 @@ end
 
 function _pred_grad(cost::BinnedCostFunction, args)
     if cost.use_pdf == :approximate
-        gf = cost.model_grad.(cost.bincenters, args...) .* prod(cost.binwidths[1])
+        gf = cost.model_grad.(cost.bincenters, args...) .* (cost.uniform ? prod(cost.binwidths[1]) : prod.(cost.binwidths))
     else
         gf = (cost.model_grad.(cost.upperedges, args...) - cost.model_grad.(cost.loweredges, args...))
     end
@@ -555,6 +558,7 @@ mutable struct ExtendedBinnedNLL{T<:Real,N,F<:Function} <: BinnedCostFunction{T,
     binwidths::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
     loweredges::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
     upperedges::Union{Nothing, Vector{T}, Array{NTuple{N,T}, N}}
+    uniform::Bool
 end
 
 """
@@ -605,8 +609,9 @@ function ExtendedBinnedNLL(bincounts::AbstractArray, binedges::Union{AbstractArr
         widths = binwidths(binedges)
         ledges = loweredges(binedges)
         uedges = upperedges(binedges)
+        uniform = all(x -> isapprox(x, widths[1]), widths)
     end
-    ExtendedBinnedNLL{T,ndim,F}(BaseCost(verbose, params), bincounts, cdf, grad, use_pdf, sum(bincounts), centers, widths, ledges, uedges)
+    ExtendedBinnedNLL{T,ndim,F}(BaseCost(verbose, params), bincounts, cdf, grad, use_pdf, sum(bincounts), centers, widths, ledges, uedges, uniform)
 end
 
 function value(cost::ExtendedBinnedNLL, args)

@@ -9,11 +9,13 @@
 
 ### Fixes
 - Issue #15. Minhit API: Added keyword arguments for `limits` and `fixed`. 
+- Issue #17. use_pdf=:approximate math regarding binwidth
   
 ### Additions
 - Added `error` in the definition of `RealVar`
 - Added roofit_basics tutorial
 - Plotting is done by using macro `@recipe` of module `RecipesBase`
+- Support for non-uniform binned cost functions
 
 ## 0.3.0 (04-04-2025)
 ### Additions
