@@ -37,3 +37,17 @@ m2 = Minuit(cost2, μ=0., σ=1., limit_σ=(0, Inf))
 migrad!(m2)
 #println(m2)
 =#
+
+using Revise
+using Minuit2
+function gg(x)
+       @show typeof(x)
+       a, b... = x
+       @show a, b
+       a^2 + b[1]
+end
+m = Minuit(gg, [1.0, 2])
+migrad!(m);
+
+m.values
+

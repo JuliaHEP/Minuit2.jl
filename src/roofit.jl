@@ -45,7 +45,7 @@ std(d::AbstractPdf) = std(distribution(d))
 function minuitkwargs(d::AbstractPdf; randomize=false)
     function value(p)
         if randomize
-            mul = rand(_Uniform(-.9,.9))
+            mul = rand(_Uniform(-.1,.1))   # Randomize the initial value by 10% of the full range
             p.value + mul * (mul > 0 ? (p.limits[2] - p.value) : (p.value - p.limits[1]))
         else
             p.value

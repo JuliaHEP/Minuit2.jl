@@ -90,6 +90,10 @@
         @test m3.fcn([1.0, 1.0, 1.0, 1.0]) ≈ 4.0
         @test m3.fcn(1.0, 1.0, 1.0, 1.0) ≈ 4.0
 
+        m4 = Minuit(sphere, [1.0, 1.0, 1.0, 1.0])
+        @test m4.npar == 4
+        @test m4.names == ["x[1]", "x[2]", "x[3]", "x[4]"]
+
         # Do a minimization now
         migrad!(m)
         @test m.is_valid

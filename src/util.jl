@@ -295,7 +295,7 @@ function Base.show(io::IO, m::Minuit)
             show(io, m.fmin, m)
         end
         show(io, m.parameters)
-        if m.has_covariance
+        if m.is_valid && m.has_covariance
             cov = [m.covariance(i, j) for i in 1:m.npar, j in 1:m.npar]
             d = diag(cov) .^ 0.5
             cov ./= d .* d'

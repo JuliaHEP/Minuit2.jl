@@ -100,9 +100,9 @@ jf.has_gradient # returns true
 """
 function FCN(fnc::Function, grad=nothing, arraycall=false, errordef=1.0)
     if arraycall
-        vf = fnc
+        vf = v -> fnc(v[])
     else
-        vf(x) = fnc(x...)
+        vf = x -> fnc(x...)
     end
     sf = eval( quote  
             @safe_cfunction($vf, Float64, (ConstCxxRef{StdVector{Float64}},)) 
@@ -112,9 +112,9 @@ function FCN(fnc::Function, grad=nothing, arraycall=false, errordef=1.0)
         jf = JuliaFcn(sf, errordef)
     else
         if arraycall
-            vg = grad
+            vg = v -> grad(v[])
         else
-            vg(x) = grad(x...)
+            vg = x -> grad(x...)
         end
         function gd(g, x)
             _gv = vg(x)
@@ -303,7 +303,8 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limi
         if names === ()
             if arraycall
                 n1 = get_argument_names(fcn)[1]
-                names = ["$n1[$i]" for i in 1:length(x0)]
+                npar = length(x0) > 1 ? length(x0) : length(x0[1])  # to take into account the case of a single array
+                names = ["$n1[$i]" for i in 1:npar]
             else
                 names = get_argument_names(fcn)
             end
