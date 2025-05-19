@@ -11,6 +11,7 @@
 - Issue #15. Minhit API: Added keyword arguments for `limits` and `fixed`. 
 - Issue #17. use_pdf=:approximate math regarding binwidth
 - Issue #23. Extra CxxWrap.CxxWrapCore.ConstCxxRef{} when calling array-input FCN?
+- Fix the parameter names for vector FCN without `names` argument
   
 ### Additions
 - Added `error` in the definition of `RealVar`
