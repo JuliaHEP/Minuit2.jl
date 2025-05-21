@@ -10,4 +10,5 @@ using Test
     include("test_cost.jl")
     include("test_distributions.jl")
     include("test_roofit.jl")
+    include("test_threads.jl")
 end
