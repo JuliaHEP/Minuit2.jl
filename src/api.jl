@@ -67,6 +67,7 @@ end
 include("util.jl")
 
 const callbacks = CxxWrap.SafeCFunction[]
+const spinlock = Base.Threads.SpinLock()   # to protect the callbacks array
 """
     FCN(fnc, grad=nothing, arraycall=false, errordef=1.0)
 
@@ -104,32 +105,35 @@ function FCN(fnc::Function, grad=nothing, arraycall=false, errordef=1.0)
     else
         vf = x -> fnc(x...)
     end
-    sf = eval( quote  
-            @safe_cfunction($vf, Float64, (ConstCxxRef{StdVector{Float64}},)) 
-         end )
-    push!(callbacks, sf)
-    if grad === nothing
-        jf = JuliaFcn(sf, errordef)
-    else
-        if arraycall
-            vg = v -> grad(v[])
-        else
-            vg = x -> grad(x...)
-        end
-        function gd(g, x)
-            _gv = vg(x)
-            for i in 1:length(_gv)
-                g[i] = _gv[i]
-            end
-            return
-        end
-        sg = eval( quote
-                @safe_cfunction($gd, Cvoid, (CxxRef{StdVector{Float64}}, ConstCxxRef{StdVector{Float64}})) 
+
+    lock(spinlock) do
+        sf = eval( quote  
+                @safe_cfunction($vf, Float64, (ConstCxxRef{StdVector{Float64}},)) 
              end )
-        push!(callbacks, sg)
-        jf = JuliaFcn(sf, sg, errordef)
+        push!(callbacks, sf)
+        if grad === nothing
+            jf = JuliaFcn(sf, errordef)
+        else
+            if arraycall
+                vg = v -> grad(v[])
+            else
+                vg = x -> grad(x...)
+            end
+            function gd(g, x)
+                _gv = vg(x)
+                for i in 1:length(_gv)
+                    g[i] = _gv[i]
+                end
+                return
+            end
+            sg = eval( quote
+                    @safe_cfunction($gd, Cvoid, (CxxRef{StdVector{Float64}}, ConstCxxRef{StdVector{Float64}})) 
+                 end )
+            push!(callbacks, sg)
+            jf = JuliaFcn(sf, sg, errordef)
+        end
+        return jf
     end
-    return jf
 end
 
 """
@@ -147,47 +151,49 @@ Create a JuliaFcn object from a CostFunction.
 function FCN(cost::CostFunction, grad=true)
     errordef = cost.errordef
     COST = typeof(cost)
+    lock(spinlock) do
     #---Check if the cost function has a gradient---------------------------------------------------
-    if grad && has_grad(cost)
-        fcn = Symbol(:_internal_cost_, length(callbacks))
-        gra = Symbol(:_internal_grad_, length(callbacks))
-        eval( 
-            quote
-                function $fcn(obj::Ptr{Cvoid}, args)::Float64
-                    costfunc = unsafe_pointer_to_objref(obj)::$COST
-                    Minuit2.cost_value(costfunc, args)
-                end
-                function $gra(obj::Ptr{Cvoid}, grad, args)::Nothing
-                    costfunc = unsafe_pointer_to_objref(obj)::$COST
-                    _grad = Minuit2.grad(costfunc, args)
-                    for i in 1:length(grad)
-                        grad[i] = _grad[i]
+        if grad && has_grad(cost)
+            fcn = Symbol(:_internal_cost_, length(callbacks))
+            gra = Symbol(:_internal_grad_, length(callbacks))
+            eval( 
+                quote
+                    function $fcn(obj::Ptr{Cvoid}, args)::Float64
+                        costfunc = unsafe_pointer_to_objref(obj)::$COST
+                        Minuit2.cost_value(costfunc, args)
                     end
-                end
-            end )
-        sf = eval( quote
-                    @safe_cfunction($fcn, Float64, (Ptr{Cvoid}, ConstCxxRef{StdVector{Float64}},))
-                   end )
-        sg = eval( quote
-                    @safe_cfunction($gra, Cvoid, (Ptr{Cvoid}, CxxRef{StdVector{Float64}}, ConstCxxRef{StdVector{Float64}})) 
-                   end )
-        push!(callbacks, sf)
-        push!(callbacks, sg)
-        return JuliaFcn(sf, sg, pointer_from_objref(cost), errordef)
-    else
-        fcn = Symbol(:_internal_cost_, length(callbacks))
-        eval( 
-            quote
-                function $fcn(obj::Ptr{Cvoid}, args)::Float64
-                    costfunc = unsafe_pointer_to_objref(obj)::$COST
-                    Minuit2.cost_value(costfunc, args)
-                end
-            end )
-        sf = eval( quote
-                    @safe_cfunction($fcn, Float64, (Ptr{Cvoid}, ConstCxxRef{StdVector{Float64}},)) 
+                    function $gra(obj::Ptr{Cvoid}, grad, args)::Nothing
+                        costfunc = unsafe_pointer_to_objref(obj)::$COST
+                        _grad = Minuit2.grad(costfunc, args)
+                        for i in 1:length(grad)
+                            grad[i] = _grad[i]
+                        end
+                    end
                 end )
-        push!(callbacks, sf)
-        return JuliaFcn(sf,  pointer_from_objref(cost), errordef)
+            sf = eval( quote
+                        @safe_cfunction($fcn, Float64, (Ptr{Cvoid}, ConstCxxRef{StdVector{Float64}},))
+                       end )
+            sg = eval( quote
+                        @safe_cfunction($gra, Cvoid, (Ptr{Cvoid}, CxxRef{StdVector{Float64}}, ConstCxxRef{StdVector{Float64}})) 
+                       end )
+            push!(callbacks, sf)
+            push!(callbacks, sg)
+            return JuliaFcn(sf, sg, pointer_from_objref(cost), errordef)
+        else
+            fcn = Symbol(:_internal_cost_, length(callbacks))
+            eval( 
+                quote
+                    function $fcn(obj::Ptr{Cvoid}, args)::Float64
+                        costfunc = unsafe_pointer_to_objref(obj)::$COST
+                        Minuit2.cost_value(costfunc, args)
+                    end
+                end )
+            sf = eval( quote
+                        @safe_cfunction($fcn, Float64, (Ptr{Cvoid}, ConstCxxRef{StdVector{Float64}},)) 
+                    end )
+            push!(callbacks, sf)
+            return JuliaFcn(sf,  pointer_from_objref(cost), errordef)
+        end
     end
 end
 

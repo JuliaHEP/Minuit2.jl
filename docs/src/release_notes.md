@@ -18,6 +18,7 @@
 - Added roofit_basics tutorial
 - Plotting is done by using macro `@recipe` of module `RecipesBase`
 - Support for non-uniform binned cost functions
+- Added protection in global state (callback array) for multi-threading
 
 ## 0.3.0 (04-04-2025)
 ### Additions

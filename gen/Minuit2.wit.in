@@ -45,5 +45,5 @@ export              = "all"
 veto_list           = "Minuit2-veto.h"
 cxx-std             = "c++17"
 inheritances        = [ ]
-export_blacklist    = [ ]
+export_blacklist    = ["size", "Number"]
 cxxwrap_version     = "@CxxWrap_VERSION@"

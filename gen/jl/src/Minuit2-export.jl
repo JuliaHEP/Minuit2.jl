@@ -8,7 +8,7 @@ export HasValidParameters, HesseFailed, Hessian, HessianCentralFDMixedDerivative
 export HessianGradientNCycles, HessianNCycles, HessianStepTolerance, Index, Int2ext, IntCovariance, IntOfExt, IntParameters, IsAboveMaxEdm
 export IsConst, IsFixed, IsHigh, IsLow, IsMedium, IsValid, IsVeryHigh, JuliaFcn, Level, Loval, Lower, LowerLimit, LowerNewMin
 export LowerState, LowerValid, Min, Minimizer, Minos, MinuitParameters, NFcn, NIter, Name, Ncycles, NewMinimum, Nfcn, Ngrad, Nrow
-export NumOfCalls, Number, Parameter, Parameters, Params, Precision, ROOT!Minuit2!FCNBase, ROOT!Minuit2!FunctionGradient
+export NumOfCalls, Parameter, Parameters, Params, Precision, ROOT!Minuit2!FCNBase, ROOT!Minuit2!FunctionGradient
 export ROOT!Minuit2!FunctionMinimum, ROOT!Minuit2!FunctionMinimum!MnAboveMaxEdm, ROOT!Minuit2!FunctionMinimum!MnReachedCallLimit
 export ROOT!Minuit2!FunctionMinimum!MnValid, ROOT!Minuit2!FunctionMinimum!Status, ROOT!Minuit2!GradientParameterSpace
 export ROOT!Minuit2!GradientParameterSpace!External, ROOT!Minuit2!GradientParameterSpace!Internal, ROOT!Minuit2!LASymMatrix, ROOT!Minuit2!LAVector
@@ -29,4 +29,4 @@ export SetHessianG2Tolerance, SetHessianGradientNCycles, SetHessianNCycles, SetH
 export SetLowStrategy, SetLowerLimit, SetMediumStrategy, SetName, SetPrecision, SetStorageLevel, SetUpperLimit, SetValue
 export SetVeryHighStrategy, State, StorageLevel, Strategy, TolerG2, Tolerstp, Trafo, Up, Upper, UpperLimit, UpperNewMin, UpperState
 export UpperValid, Upval, UserCovariance, UserParameters, UserState, Value, VariableParameters, Vec, X, XYPoint, Y, add!, assign
-export gradParameterSpace, mult!, paren, size, std!pair, sub!
+export gradParameterSpace, mult!, paren, std!pair, sub!
