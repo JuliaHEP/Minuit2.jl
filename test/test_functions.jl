@@ -15,6 +15,7 @@ include("functions.jl")
 
         @test m.fcn.nfcn > 0
         @test m.fcn.ngrad > 0
+        @test matrix(m) ≈ [1.0382382795695269 2.076484826253819; 2.076484826253819 4.162986186802997]
     end
 
     @testset "Ackley" begin

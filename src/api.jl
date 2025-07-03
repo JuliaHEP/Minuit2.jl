@@ -397,16 +397,8 @@ when it fails to converge after the first iteration:
 - `use_simplex::Bool=true` : If `true`, use the simplex algorithm in retry to find the minimum. If `false`, use the migrad algorithm.
 """
 function migrad!(m::Minuit, strategy=1; ncall=0, iterate=5, use_simplex=true)
-    migrad = MnMigrad(m.fcn, m.last_state, MnStrategy(strategy))
-    # elapsed = @elapsed min = migrad(ncall, m.tolerance)   # calls the operator () to do the minimization
-    elapsed = @elapsed min = robust_low_level_fit(m.fcn, m.last_state, ncall, MnStrategy(strategy), m.tolerance, m.precision, iterate, use_simplex)
+    elapsed = @elapsed min = robust_low_level_fit(m, ncall, MnStrategy(strategy), iterate, use_simplex)
     #---Update the Minuit object with the results---------------------------------------------------
-    m.app = migrad
-    m.method = :migrad
-    m.fmin = min
-    m.mino = nothing
-    m.strategy = strategy
-    m.last_state = UserState(min)[]
     m.elapsed = elapsed
     return m
 end
@@ -865,7 +857,7 @@ function mnprofile(m::Minuit, var; size=30, bound=2, grid=nothing, subtract_min=
     strategy = MnStrategy(0)
     for (i,v) in enumerate(x)
         SetValue(state, ipar-1, v)
-        fmin = robust_low_level_fit(m.fcn, state, ncall, strategy, m.tolerance, m.precision, iterate, use_simplex)
+        fmin = robust_low_level_fit(m, ncall, strategy, iterate, use_simplex)
         IsValid(fmin) || @warn("MIGRAD fails to converge for $pname=$v")
         status[i] = IsValid(fmin)
         y[i] = Fval(fmin)
@@ -875,7 +867,7 @@ function mnprofile(m::Minuit, var; size=30, bound=2, grid=nothing, subtract_min=
 end
 
 """
-    robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision, iterate, use_simplex)
+    robust_low_level_fit(m::Minuit, ncall, strategy, iterate, use_simplex)
 
 A meta algorithm that:
 
@@ -884,8 +876,10 @@ A meta algorithm that:
 3. if not, sets strategy=2, and start running N more iterations
 3. in each additional iteration, if `use_simplex`, runs SIMPLEX (again, think NelderMead) first, followed by a Migrad
 """
-function robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision, iterate, use_simplex)
-    migrad = MnMigrad(fcn, state, strategy)
+function robust_low_level_fit(m::Minuit, ncall, strategy, iterate, use_simplex)
+    (;fcn, last_state, tolerance, precision) = m
+
+    migrad = MnMigrad(fcn, last_state, strategy)
     isnothing(precision) || SetPrecision(migrad, precision)
     fmin = migrad(ncall, tolerance)
     strategy = MnStrategy(2)
@@ -905,5 +899,11 @@ function robust_low_level_fit(fcn, state, ncall, strategy, tolerance, precision,
         fmin = migrad(ncall, tolerance)
         iterate -= 1
     end
+    m.app = migrad
+    m.method = :migrad
+    m.fmin = fmin
+    m.mino = nothing
+    m.last_state = UserState(fmin)[]
+    m.strategy = 2
     return fmin
 end
