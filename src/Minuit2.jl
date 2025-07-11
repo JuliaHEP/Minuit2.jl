@@ -1,6 +1,7 @@
 module Minuit2
     using CxxWrap
     using Libdl
+    using ComponentArrays: ComponentArrays, ComponentArray, getaxes
 
     # Check whether the wrappers have been build locally otherwise use the binary package Minuit2_Julia_Wrapper_jll
     gendir = normpath(joinpath(@__DIR__, "../gen"))

@@ -1,5 +1,6 @@
 using Minuit2
 using Minuit2.RooFit
+using ComponentArrays: ComponentArray
 using Test
 
 @testset "Minuit2 tests" verbose = true begin 

@@ -4,6 +4,7 @@ authors = ["Jan Strube <jan.strube@gmail.com>", "Pere Mato <pere.mato@cern.ch>"]
 version = "0.3.3"
 
 [deps]
+ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 FHist = "68837c9b-b678-4cd5-9925-8a54edc8f695"
@@ -11,12 +12,13 @@ IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Minuit2_Julia_Wrapper_jll = "65cff058-67fb-5034-9600-a8f6a0feb90b"
+Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 
 [weakdeps]
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
@@ -28,25 +30,28 @@ Minuit2FHistExt = ["FHist"]
 Minuit2PlotsExt = ["Plots", "FHist"]
 
 [compat]
+ComponentArrays = "0.15.28"
 CxxWrap = "0.16"
 Distributions = "0.25.117"
+FHist = "0.11"
 IterTools = "1.10.0"
 LinearAlgebra = "1"
 Minuit2_Julia_Wrapper_jll = "0.3.0"
+Optimization = "4.4.0"
 Plots = "1"
-RecipesBase = "^1"
 Polynomials = "4.0.19"
 PrettyTables = "2.4.0"
 Random = "1"
+RecipesBase = "^1"
 SpecialFunctions = "2.5.0"
 StatsBase = "0.34.4"
 julia = "1.10"
-FHist = "0.11"
 
 [extras]
+ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "StatsBase", "LinearAlgebra", "FiniteDiff", "QuadGK"]
+test = ["Test", "StatsBase", "ComponentArrays", "LinearAlgebra", "FiniteDiff", "QuadGK"]

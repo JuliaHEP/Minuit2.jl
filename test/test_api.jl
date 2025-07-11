@@ -132,6 +132,23 @@
 
     end
 
+    @testset "Minuit with ComponentArrays" begin
+        rosenbrock_ca(x::ComponentArray) = rosenbrock(x.x[1], x.x[2])
+        m = Minuit(rosenbrock_ca, ComponentArray(; x = [0.0, 0.0]))
+
+        @test_throws ArgumentError m.is_valid
+        @test_throws ArgumentError m.fval
+
+        @test m.values.x == [0.0, 0.0]
+        # FIXME
+        # @test m.errors == [0.1, 0.1]
+
+        # Do a minimization now
+        migrad!(m)
+        # this still has the components
+        @test m.values.x ≈ [1.0, 1.0] atol=2e-2
+    end
+
     @testset "Migrad with low_level_robust_fit" begin
         fn(x, p1, p2, p3) = p1 * x^(p2*log(x)^2 + p3*log(x)^3) + randn()
 
