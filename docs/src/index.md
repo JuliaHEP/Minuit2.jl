@@ -19,7 +19,7 @@ A mutable `Minuit` structure instance is constructed from the cost function to b
 
 ## Getting Started
 
-```Julia
+```julia
 julia> using Minuit2
 
 julia> rosenbrock(x, y) = (1 - x)^2 + 100 * (y - x^2)^2
@@ -76,7 +76,7 @@ julia> ex, ey = m.errors
 ### Minuit2.RooFit module
 
 This is simple example of the functionality of the `Minuit2.RooFit` module provided additionally to this package.
-```Julia
+```julia
 #---Observable
 mes =  RealVar(:mes, limits=(5.20, 5.30), nbins=50)
 

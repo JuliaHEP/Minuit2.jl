@@ -32,8 +32,18 @@ module Minuit2
     function draw_mnprofile end
     function visualize end
 
+    """
+        struct MigradOptimizer
+            strategy::Int = 1
+            tolerance::Float64 = 0.1
+        end
+
+    Optimizer structure for the Migrad algorithm to be used by `Optimization.jl` ecosystem.
+    Not all options supported by [`Minuit`](@ref) are avaiable yet, as they may not map neatly to the `Optimization.jl` interface.
+    """
     @kwdef struct MigradOptimizer
         strategy::Int = 1
+        tolerance::Float64 = 0.1
     end
 
 end

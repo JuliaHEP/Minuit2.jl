@@ -150,9 +150,9 @@
     end
 
     @testset "Migrad with low_level_robust_fit" begin
-        fn(x, p1, p2, p3) = p1 * x^(p2*log(x)^2 + p3*log(x)^3) + randn()
+        fn(x, p1, p2, p3) = p1 * x^(p2*log(x)^2 + p3*log(x)^3) + 3*randn()
 
-        true_ys = fn.(1:10, 10, 0.1, 0.01)
+        true_ys = fn.(1:10, 10, 0.2, 0.05)
         m = Minuit(LeastSquares(1:10, true_ys, sqrt.(true_ys), fn), fill(0.1, 3); strategy=0, tolerance=1e-3)
         migrad!(m; iterate=1)
         naive_loss = m.fval
