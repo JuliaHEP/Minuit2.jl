@@ -64,6 +64,26 @@
         @test m1.strategy == 2
         @test m1.tolerance == 1e-3
 
+
+        struct Rosenbrock end
+        (::Rosenbrock)(x, y) = rosenbrock(x, y)
+        m1_1 = Minuit(Rosenbrock(), x = 10.0, y = 10,
+            error_x = 0.2, error_y = 0.3,
+            fix_x = true, limit_y = (0, 10),
+            errordef = 0.5, strategy = 2, tolerance = 1e-3)
+
+        @test m1_1.npar == 2
+        @test m1_1.names == ["x", "y"]
+        @test m1_1.values == [10.0, 10.0]
+        @test m1_1.errors == [0.2, 0.3]
+        @test m1_1.fixed == [true, false]
+        @test m1_1.limits == [(-Inf, Inf), (0.0, 10.0)]
+        @test m1_1.fcn.up == 0.5
+        @test m1_1.funcname == "rosenbrock(x, y)"
+        @test m1_1.method == :migrad
+        @test m1_1.strategy == 2
+        @test m1_1.tolerance == 1e-3
+
         m2 = Minuit(rosenbrock, [0.0, 0.0], 
                     error=[0.1, 0.2], 
                     fixed=[false, true], 
