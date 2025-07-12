@@ -1,3 +1,5 @@
+using Random: seed!
+
 @testset "API" verbose=true begin
     @testset "FCN" begin
         fcn1 = FCN(rosenbrock, rosenbrock_grad)
@@ -150,6 +152,7 @@
     end
 
     @testset "Migrad with low_level_robust_fit" begin
+        seed!(123456)
         fn(x, p1, p2, p3) = p1 * x^(p2*log(x)^2 + p3*log(x)^3) + randn()
 
         true_ys = fn.(1:20, 10, 0.1, 0.005)
