@@ -37,6 +37,7 @@ module Minuit2
             strategy::Int = 1
             tolerance::Float64 = 0.1
             errordef::Float64 = 1.0
+            maxfcn::Int = 0
         end
 
     Optimizer structure for the Migrad algorithm to be used by `Optimization.jl` ecosystem.
@@ -46,6 +47,7 @@ module Minuit2
         strategy::Int = 1
         tolerance::Float64 = 0.1
         errordef::Float64 = 1.0
+        maxfcn::Int = 0
     end
 
 end

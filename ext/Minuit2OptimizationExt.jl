@@ -65,7 +65,7 @@ function SciMLBase.__solve(
         abstol = abstol, reltol = reltol, kwargs...
     )
 
-    m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef)
+    m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef, opt.maxfcn)
     migrad!(m, opt_arg.ncall)
 
     stats = Optimization.OptimizationStats(; time = m.elapsed)
