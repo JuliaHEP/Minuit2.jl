@@ -1,6 +1,4 @@
-using Random: seed!
-
-@testset "API" verbose=true begin
+@testset "API" verbose = true begin
     @testset "FCN" begin
         fcn1 = FCN(rosenbrock, rosenbrock_grad)
 

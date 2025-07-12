@@ -1,5 +1,3 @@
-using CxxWrap
-
 fn(x, y) = 10 + x^2 + ((y - 1) / 2)^2
 fn_grad(x, y) = (2 * x, y - 1)
 

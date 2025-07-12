@@ -1,9 +1,12 @@
-using Minuit2
-using Minuit2.RooFit
 using ComponentArrays: ComponentArray
+using Minuit2.RooFit
+using Random: seed!
+using Minuit2
+using CxxWrap
 using Test
+include("functions.jl")
 
-@testset "Minuit2 tests" verbose = true begin 
+@testset "Minuit2 tests" verbose = true begin
     include("test_wrapper.jl")
     include("test_functions.jl")
     include("test_util.jl")
