@@ -1,5 +1,3 @@
-include("functions.jl")
-
 @testset "Functions" verbose=true begin
     @testset "Rosenbrock" begin
         m = Minuit(rosenbrock, x=0, y=0, 
