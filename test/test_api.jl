@@ -79,7 +79,7 @@
         @test m1_1.fixed == [true, false]
         @test m1_1.limits == [(-Inf, Inf), (0.0, 10.0)]
         @test m1_1.fcn.up == 0.5
-        @test m1_1.funcname == "rosenbrock(x, y)"
+        @test m1_1.funcname == "(::Rosenbrock)(x, y)"
         @test m1_1.method == :migrad
         @test m1_1.strategy == 2
         @test m1_1.tolerance == 1e-3

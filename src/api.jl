@@ -70,14 +70,14 @@ include("util.jl")
 const callbacks = CxxWrap.SafeCFunction[]
 const spinlock = Base.Threads.SpinLock()   # to protect the callbacks array
 """
-    FCN(fnc::Function, grad=nothing, arraycall=false, errordef=1.0; componentarray_axes=nothing)
+    FCN(fnc, grad=nothing, arraycall=false, errordef=1.0; componentarray_axes=nothing)
 
 Create a JuliaFcn object from a Julia function `fnc` and its gradient `grad`.
 
 ## Arguments
-- `fnc::Function` : The Julia function to minimize. It can either accept a set of discrete arguments or a single argument of type `AbstractVector`. 
+- `fnc` : The Julia function to minimize. It can either accept a set of discrete arguments or a single argument of type `AbstractVector`. 
    This is decided in conjunction with the argument `arraycall`.
-- `grad::Function=nothing`; Gradient Julia function. The input arguments follow the same as for `fcn` and it returns a `Vector`, of length the number of parameters, with the gradients.
+- `grad=nothing`; Gradient Julia function. The input arguments follow the same as for `fcn` and it returns a `Vector`, of length the number of parameters, with the gradients.
 - `arraycall::Bool=false` : If `true`, the function `fcn` accepts a single argument of type `AbstractVector`. If `false`, the function accepts a set of discrete arguments.
 - `errordef::Real=1.0` : Error definition of the function. Minuit defines parameter errors as the change in parameter 
    value required to change the function value by `errordef`. Normally, for chisquared fits it is 1, and for negative log likelihood, its value is 0.5. 
@@ -103,7 +103,7 @@ jf.ngrad # returns the number of gradient calls
 jf.has_gradient # returns true
 ```
 """
-function FCN(fnc::Function, grad=nothing, arraycall=false, errordef=1.0; componentarray_axes=nothing)
+function FCN(fnc, grad=nothing, arraycall=false, errordef=1.0; componentarray_axes=nothing)
     vf = if arraycall && !isnothing(componentarray_axes)
         v -> fnc(ComponentArray(v[], componentarray_axes))
     elseif arraycall
