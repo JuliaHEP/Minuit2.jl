@@ -33,9 +33,10 @@ module Minuit2
     function visualize end
 
     """
-        struct MigradOptimizer
+        @kwdef struct MigradOptimizer
             strategy::Int = 1
             tolerance::Float64 = 0.1
+            errordef::Float64 = 1.0
         end
 
     Optimizer structure for the Migrad algorithm to be used by `Optimization.jl` ecosystem.
@@ -44,6 +45,7 @@ module Minuit2
     @kwdef struct MigradOptimizer
         strategy::Int = 1
         tolerance::Float64 = 0.1
+        errordef::Float64 = 1.0
     end
 
 end
