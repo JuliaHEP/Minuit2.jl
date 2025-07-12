@@ -12,4 +12,5 @@ using Test
     include("test_distributions.jl")
     include("test_roofit.jl")
     include("test_threads.jl")
+    include("test_optimization_integration.jl")
 end

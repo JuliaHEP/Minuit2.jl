@@ -140,13 +140,13 @@
         @test_throws ArgumentError m.fval
 
         @test m.values.x == [0.0, 0.0]
-        # FIXME
-        # @test m.errors == [0.1, 0.1]
+        @test m.errors.x == [0.1, 0.1]
 
         # Do a minimization now
         migrad!(m)
         # this still has the components
         @test m.values.x ≈ [1.0, 1.0] atol=2e-2
+        @test m.errors.x ≈ [1.0, 2.0] atol=2e-2
     end
 
     @testset "Migrad with low_level_robust_fit" begin

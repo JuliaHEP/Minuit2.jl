@@ -24,11 +24,17 @@ module Minuit2
     include("distributions.jl")
     include("roofit.jl")
 
-    export draw_contour, draw_mncontour, draw_profile, draw_mnprofile, visualize
+    export draw_contour, draw_mncontour, draw_profile, draw_mnprofile, visualize, MigradOptimizer
+
     function draw_contour end
     function draw_mncontour end
     function draw_profile end
     function draw_mnprofile end
     function visualize end
+
+    @kwdef struct MigradOptimizer
+        strategy::Int = 1
+    end
+
 end
 

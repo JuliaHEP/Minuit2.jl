@@ -191,10 +191,13 @@ end
 #---Minuit property accessors-----------------------------------------------------------------------
 function getproperty(m::Minuit, name::Symbol)
     if name == :values
+        vs = ValueView(m)
         ca_axes = m.componentarray_axes
-        return isnothing(ca_axes) ? ValueView(m) : ComponentArray(collect(ValueView(m)), ca_axes)
+        return isnothing(ca_axes) ? vs : ComponentArray(collect(vs), ca_axes)
     elseif name == :errors
-        return ErrorView(m)
+        es = ErrorView(m)
+        ca_axes = m.componentarray_axes
+        return isnothing(ca_axes) ? es : ComponentArray(collect(es), ca_axes)
     elseif name == :fixed
         return FixedView(m)
     elseif name == :limits
