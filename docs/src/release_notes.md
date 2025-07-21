@@ -1,12 +1,14 @@
 
 # Release Notes
 
-## 0.4.0
+## 0.4.0 (21-07-2025)
 ### Breaking changes
+- Replaced local distributions (Chebyshev, ArgusBG) with the ones in `DistributionsHEP` package
 - To instantiate a `RealVar` requires a initial value to deduce the `T` or to specify the parameter `T` with `RealVar{Float64}` for example.
 - Removed function `RooFit.generateBinned`. The data is generated binned if nbins > 0 in the observable variable.
-- The function `RooFi.generate` returns a `DataSet`
+- The function `RooFit.generate` returns a `DataSet`
 
+## 0.3.3 (03-07-2025)
 ### Fixes
 - Issue #15. Minhit API: Added keyword arguments for `limits` and `fixed`. 
 - Issue #17. use_pdf=:approximate math regarding binwidth

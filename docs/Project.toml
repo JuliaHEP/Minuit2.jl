@@ -1,6 +1,7 @@
 [deps]
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+DistributionsHEP = "0d0d6f60-fb7b-48ca-90bb-e14e8b1655a7"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FHist = "68837c9b-b678-4cd5-9925-8a54edc8f695"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
