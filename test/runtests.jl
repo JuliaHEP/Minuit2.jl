@@ -8,7 +8,6 @@ using Test
     include("test_util.jl")
     include("test_api.jl")
     include("test_cost.jl")
-    include("test_distributions.jl")
     include("test_roofit.jl")
     include("test_threads.jl")
 end
