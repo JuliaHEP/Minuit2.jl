@@ -1,6 +1,10 @@
 
 # Release Notes
 
+## 0.5.0 (21-07-2025)
+### Breaking changes
+- Replaced local distributions (Chebyshev, ArgusBG) with the ones in `DistributionsHEP` package
+
 ## 0.4.0
 ### Breaking changes
 - To instantiate a `RealVar` requires a initial value to deduce the `T` or to specify the parameter `T` with `RealVar{Float64}` for example.

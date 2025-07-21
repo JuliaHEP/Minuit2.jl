@@ -3,7 +3,8 @@ module RooFit
 import Distributions: UnivariateDistribution, Exponential as _Exponential, Normal as _Normal, Uniform as _Uniform, pdf, cdf, truncated
 import FHist: Hist1D, AbstractHistogram
 import StatsBase: wsample, mean, std
-import Minuit2: ArgusBGDist, ChebyshevDist, BinnedNLL, ExtendedBinnedNLL, UnbinnedNLL, ExtendedUnbinnedNLL, CostFunction, Minuit, migrad!
+import Minuit2: BinnedNLL, ExtendedBinnedNLL, UnbinnedNLL, ExtendedUnbinnedNLL, CostFunction, Minuit, migrad!
+import DistributionsHEP: ArgusBG as ArgusBGDist, Chebyshev as ChebyshevDist
 import Base: getproperty, setproperty!, show, isconst, getindex, setindex!
 import Random: AbstractRNG, default_rng
 
@@ -315,13 +316,13 @@ function ArgusPdf(name, m, m₀, c, p=ConstVar(:p, 0.5))
                         $(fname)(x, $((param.value for param in params)...))
                     end
                     function $(fname)(x, $((param.name for param in params)...))
-                        d = ArgusBGDist($(m₀_), $(c_), $(p_), $(a), $(b))
+                        d = truncated(ArgusBGDist($(c_), $(p_), 0, $(m₀_)), $(a), $(b))
                         ifelse.($(a) .<= x .<= $(b), pdf.(d, x), zero(x))
                     end
                 end )
     ArgusPdf(name, m, m₀, c, p, params, pdf)
 end
-distribution(d::ArgusPdf) = truncated(ArgusBGDist(d.m₀.value, d.c.value, d.p.value), d.x.limits...)
+distribution(d::ArgusPdf) = truncated(ArgusBGDist(d.c.value, d.p.value, 0, d.m₀.value), d.x.limits...)
 
 #---Chebyshev distribution-------------------------------------------------------------------------
 struct Chebyshev{T<:Real,PDF<:Function} <: AbstractPdf
