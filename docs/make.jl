@@ -27,6 +27,7 @@ makedocs(;
     pages=[
         "Introduction" => "index.md",
         "Public API" => "api.md",
+        "Optimization.jl Interface" => "optimization_interface.md",
         "Tutorials" => [ "Basic" => basic_mds,
                         "Advanced" => advanced_mds,
                         "RooFit" => rootfit_mds],

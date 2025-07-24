@@ -61,6 +61,7 @@ mutable struct Minuit
     fmin::Union{FunctionMinimum, Nothing}           # The result of the minimization
     mino::Union{Dict{String, MinosError}, Nothing}  # The Minos errors
     elapsed::Float64                                # The elapsed time of last operation
+    componentarray_axes::Union{Nothing, NTuple{<:Any, ComponentArrays.Axis}} # Axes of the ComponentArray if used
 end
 
 #---Minuit struct functions------------------------------------------------------------------------
@@ -69,17 +70,20 @@ include("util.jl")
 const callbacks = CxxWrap.SafeCFunction[]
 const spinlock = Base.Threads.SpinLock()   # to protect the callbacks array
 """
-    FCN(fnc, grad=nothing, arraycall=false, errordef=1.0)
+    FCN(fnc, grad=nothing, arraycall=false, errordef=1.0; componentarray_axes=nothing)
 
 Create a JuliaFcn object from a Julia function `fnc` and its gradient `grad`.
 
 ## Arguments
-- `fnc::Function` : The Julia function to minimize. It can either accept a set of discrete arguments or a single argument of type `AbstractVector`. 
+- `fnc` : The Julia function to minimize. It can either accept a set of discrete arguments or a single argument of type `AbstractVector`. 
    This is decided in conjunction with the argument `arraycall`.
-- `grad::Function=nothing`; Gradient Julia function. The input arguments follow the same as for `fcn` and it returns a `Vector`, of length the number of parameters, with the gradients.
+- `grad=nothing`; Gradient Julia function. The input arguments follow the same as for `fcn` and it returns a `Vector`, of length the number of parameters, with the gradients.
 - `arraycall::Bool=false` : If `true`, the function `fcn` accepts a single argument of type `AbstractVector`. If `false`, the function accepts a set of discrete arguments.
 - `errordef::Real=1.0` : Error definition of the function. Minuit defines parameter errors as the change in parameter 
    value required to change the function value by `errordef`. Normally, for chisquared fits it is 1, and for negative log likelihood, its value is 0.5. 
+
+## Keyword Arguments
+- `componentarray_axes = nothing`: If this is not `nothing`, it will be used to reconstruct a `ComponentArray` via `ComponentArray(input, componentarray_axes)`. This is automatically set via `getaxes()` if an input is a `ComponentArray`.
 
 ## Returns
 - `JuliaFcn` : A JuliaFcn object inheriting from the abstract C++ class `Minuit::FCNBase`that can be used in Minuit.
@@ -99,11 +103,13 @@ jf.ngrad # returns the number of gradient calls
 jf.has_gradient # returns true
 ```
 """
-function FCN(fnc::Function, grad=nothing, arraycall=false, errordef=1.0)
-    if arraycall
-        vf = v -> fnc(v[])
+function FCN(fnc, grad=nothing, arraycall=false, errordef=1.0; componentarray_axes=nothing)
+    vf = if arraycall && !isnothing(componentarray_axes)
+        v -> fnc(ComponentArray(v[], componentarray_axes))
+    elseif arraycall
+        v -> fnc(v[])
     else
-        vf = x -> fnc(x...)
+        x -> fnc(x...)
     end
 
     lock(spinlock) do
@@ -293,6 +299,8 @@ sequence.
 """
 function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limits=(), fixed=(), method=:migrad, maxfcn=0, 
                 tolerance=0.1, precision=nothing, strategy=1, arraycall=nothing, kwargs...)
+
+    componentarray_axes = length(x0) == 1 && only(x0) isa ComponentArray ? getaxes(only(x0)) : nothing
     if fcn isa CostFunction
         cost = fcn
         jf = FCN(fcn, grad isa Bool ? grad : true) # If grad is a boolean, use it to control it
@@ -316,7 +324,7 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limi
             end
         end
         #---Construct the FCN object-------------------------------------------------------------------
-        jf = FCN(fcn, grad, arraycall, errordef)
+        jf = FCN(fcn, grad, arraycall, errordef; componentarray_axes)
         #---Get the function name---------------------------------------------------------------------
         funcname = string(first(methods(fcn)))
         funcname = funcname[1:findfirst('@',funcname)-2]
@@ -353,7 +361,7 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limi
         end
     end
     names = [Name(userpars, i-1) for i in 1:npar]
-    Minuit(funcname, cost, jf, x0, npar, names, method, tolerance, precision, strategy, userpars, userpars, nothing, nothing, nothing, 0.0)
+    Minuit(funcname, cost, jf, x0, npar, names, method, tolerance, precision, strategy, userpars, userpars, nothing, nothing, nothing, 0.0, componentarray_axes)
 end
 
 function ndof(m::Minuit)

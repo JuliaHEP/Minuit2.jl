@@ -1,4 +1,4 @@
-@testset "API" verbose=true begin
+@testset "API" verbose = true begin
     @testset "FCN" begin
         fcn1 = FCN(rosenbrock, rosenbrock_grad)
 
@@ -63,6 +63,26 @@
         @test m1.method == :migrad
         @test m1.strategy == 2
         @test m1.tolerance == 1e-3
+
+
+        struct Rosenbrock end
+        (::Rosenbrock)(x, y) = rosenbrock(x, y)
+        m1_1 = Minuit(Rosenbrock(), x = 10.0, y = 10,
+            error_x = 0.2, error_y = 0.3,
+            fix_x = true, limit_y = (0, 10),
+            errordef = 0.5, strategy = 2, tolerance = 1e-3)
+
+        @test m1_1.npar == 2
+        @test m1_1.names == ["x", "y"]
+        @test m1_1.values == [10.0, 10.0]
+        @test m1_1.errors == [0.2, 0.3]
+        @test m1_1.fixed == [true, false]
+        @test m1_1.limits == [(-Inf, Inf), (0.0, 10.0)]
+        @test m1_1.fcn.up == 0.5
+        @test m1_1.funcname == "(::Rosenbrock)(x, y)"
+        @test m1_1.method == :migrad
+        @test m1_1.strategy == 2
+        @test m1_1.tolerance == 1e-3
 
         m2 = Minuit(rosenbrock, [0.0, 0.0], 
                     error=[0.1, 0.2], 
@@ -132,15 +152,33 @@
 
     end
 
+    @testset "Minuit with ComponentArrays" begin
+        rosenbrock_ca(x::ComponentArray) = rosenbrock(x.x[1], x.x[2])
+        m = Minuit(rosenbrock_ca, ComponentArray(; x = [0.0, 0.0]))
+
+        @test_throws ArgumentError m.is_valid
+        @test_throws ArgumentError m.fval
+
+        @test m.values.x == [0.0, 0.0]
+        @test m.errors.x == [0.1, 0.1]
+
+        # Do a minimization now
+        migrad!(m)
+        # this still has the components
+        @test m.values.x ≈ [1.0, 1.0] atol=2e-2
+        @test m.errors.x ≈ [1.0, 2.0] atol=2e-2
+    end
+
     @testset "Migrad with low_level_robust_fit" begin
+        seed!(123456)
         fn(x, p1, p2, p3) = p1 * x^(p2*log(x)^2 + p3*log(x)^3) + randn()
 
-        true_ys = fn.(1:10, 10, 0.1, 0.01)
-        m = Minuit(LeastSquares(1:10, true_ys, sqrt.(true_ys), fn), fill(0.1, 3); strategy=0, tolerance=1e-3)
+        true_ys = fn.(1:20, 10, 0.1, 0.005)
+        m = Minuit(LeastSquares(1:20, true_ys, sqrt.(true_ys), fn), fill(0.1, 3); strategy=0, tolerance=1e-3)
         migrad!(m; iterate=1)
         naive_loss = m.fval
 
-        m = Minuit(LeastSquares(1:10, true_ys, sqrt.(true_ys), fn), fill(0.1, 3); strategy=0, tolerance=1e-3)
+        m = Minuit(LeastSquares(1:20, true_ys, sqrt.(true_ys), fn), fill(0.1, 3); strategy=0, tolerance=1e-3)
         migrad!(m)
         iterated_loss = m.fval
 
