@@ -3,10 +3,15 @@ module Minuit2
     using Libdl
     using ComponentArrays: ComponentArrays, ComponentArray, getaxes
 
+    if VERSION  > v"1.11.99"  # to silence warning in Julia 1.12
+      import Base: Number
+    end
+
     # Check whether the wrappers have been build locally otherwise use the binary package Minuit2_Julia_Wrapper_jll
     gendir = normpath(joinpath(@__DIR__, "../gen"))
     if isdir(joinpath(gendir, "build/lib"))
         include(joinpath(gendir, "jl/src/Minuit2-export.jl"))
+        println("Using local Minuit2 wrapper code from: $gendir")
         @wrapmodule(()->joinpath(gendir, "build/lib", "libMinuit2Wrap.$(Libdl.dlext)"))
     else
         using Minuit2_Julia_Wrapper_jll

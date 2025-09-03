@@ -1,5 +1,5 @@
 using CxxWrap
-using WrapIt
+#using WrapIt
 using Minuit2_jll
 
 #---Build the wrapper library----------------------------------------------------------------------
@@ -31,9 +31,9 @@ open(wit, "w") do f
     end
 end
 
-WrapIt.install()
-rc = wrapit(wit, force=true, cmake=false, update=updatemode, verbosity=1)
-#rc = run(`wrapit $wit --force -v 1`).exitcode
+#WrapIt.install()
+#rc = wrapit(wit, force=true, cmake=false, update=updatemode, verbosity=1)
+rc = run(`wrapit $wit --force -v 1`).exitcode
 if !isnothing(rc) && rc != 0
     println(stderr, "Failed to produce wrapper code with the wrapit function. Exited with code ", rc, ".")
     exit(rc)

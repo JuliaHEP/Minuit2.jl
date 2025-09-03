@@ -11,6 +11,28 @@ std::basic_ostream
 std::span<const ROOT::Minuit2::MinimumState>
 std::span<const double>
 
+Auto-vetoed functions
+---------------------
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::FunctionMinimum &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::MinimumState &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::LAVector &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::LASymMatrix &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::MnUserParameters &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::MnUserCovariance &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::MnGlobalCorrelationCoeff &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::MnUserParameterState &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::MnMachinePrecision &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::MinosError &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const ROOT::Minuit2::ContoursError &)
+std::ostream & ROOT::Minuit2::operator<<(std::ostream &, const std::pair<double,double> &)
+void ROOT::Minuit2::MnUserParameters::MnUserParameters(std::span<const double>, std::span<const double>)
+void ROOT::Minuit2::MnUserCovariance::MnUserCovariance(std::span<const double>, unsigned int)
+void ROOT::Minuit2::MnUserParameterState::MnUserParameterState(std::span<const double>, std::span<const double>)
+void ROOT::Minuit2::MnUserParameterState::MnUserParameterState(std::span<const double>, std::span<const double>, unsigned int)
+void ROOT::Minuit2::MnUserParameterState::MnUserParameterState(std::span<const double>, const ROOT::Minuit2::MnUserCovariance &)
+void ROOT::Minuit2::FunctionMinimum::FunctionMinimum(const ROOT::Minuit2::MinimumSeed &, std::span<const ROOT::Minuit2::MinimumState>, double, ROOT::Minuit2::FunctionMinimum::Status)
+ROOT::Minuit2::ContoursError ROOT::Minuit2::MnContours::Contour(unsigned int, unsigned int, unsigned int)
+
 Class(es) from vetoed_finalizer_classes configuration parameter that were not found:
 -------------------------------------------------------------------------------------
 

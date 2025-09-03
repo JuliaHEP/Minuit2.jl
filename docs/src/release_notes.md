@@ -1,10 +1,12 @@
 
 # Release Notes
 
-## Latest
+## 0.4.1 (03-09-2025)
 ### Additions
 - `m = Minuit(f, x)` can be set up with `x::ComponentArray` and the resultant `m.values, m.errors` will be `ComponentArray`s as well.
 - Added `MigradOptimizer()` which can be used as a solver in the `Optimization.jl` ecosystem.
+### Other changes
+- Upgraded to CxxWrap 0.17
 
 ## 0.4.0 (21-07-2025)
 ### Breaking changes
