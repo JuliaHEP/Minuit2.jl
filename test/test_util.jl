@@ -22,6 +22,8 @@
         @test v[1] == 3.0
         @test v[2] == 2.0
         @test v[3] == 1.0
+
+        @test ndims(v) == 1
            
     end
     @testset "ErrorView" begin
@@ -43,6 +45,7 @@
         @test v["y"] == 2.0
         @test v["z"] == 3.0
 
+        @test ndims(v) == 1
     end
 
     @testset "FixedView" begin
