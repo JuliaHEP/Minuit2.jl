@@ -1,4 +1,5 @@
-import Base: getindex, setindex!, getproperty, length, lastindex, iterate, show, isapprox, eltype, show, ==
+import Base: getindex, setindex!, getproperty, length, lastindex, iterate, show, isapprox, 
+             eltype, show, ==, ndims
 
 function keypair(m::Minuit, key::Union{Int, String, Symbol})1
     if key isa Int
@@ -43,6 +44,7 @@ iterate(view::AbstractView, state=1) = state > length(view) ? nothing : (view[st
 show(io::IO, view::AbstractView) = show(io, collect(view))
 isapprox(view::AbstractView, v::Vector; kwargs...) = isapprox(collect(view), v; kwargs...)
 ==(view::AbstractView, v::Vector) = collect(view) == v
+ndims(::AbstractView) = 1
 
 #---Concrete views---------------------------------------------------------------------------------
 

@@ -5,6 +5,9 @@
 ### Additions
 - `m = Minuit(f, x)` can be set up with `x::ComponentArray` and the resultant `m.values, m.errors` will be `ComponentArray`s as well.
 - Added `MigradOptimizer()` which can be used as a solver in the `Optimization.jl` ecosystem.
+### Fixes
+- Fix for [#34 ValueView doesn't have ndims defined](https://github.com/JuliaHEP/Minuit2.jl/issues/34)
+
 ### Other changes
 - Upgraded to CxxWrap 0.17
 
