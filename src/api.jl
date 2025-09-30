@@ -348,12 +348,12 @@ function Minuit(fcn, x0...; grad=nothing, error=(), errordef=1.0, names=(), limi
         #---Get the limits, first if the user provided them, then from the keyword arguments----------------
         limit = i > length(limits) ? haskey(kwargs, Symbol("limit_", name)) ? kwargs[Symbol("limit_", name)] : nothing : limits[i]
         if limit !== nothing
-            if limit[1] == -Inf
-                SetUpperLimit(userpars, i-1, limit[2])
-            elseif limit[2] == Inf
-                SetLowerLimit(userpars, i-1, limit[1])
-            else
+            if isfinite(limit[1]) && isfinite(limit[2])
                 SetLimits(userpars, i-1, limit[1], limit[2])
+            elseif limit[1] == -Inf && isfinite(limit[2])
+                SetUpperLimit(userpars, i-1, limit[2])
+            elseif limit[2] == Inf && isfinite(limit[1])
+                SetLowerLimit(userpars, i-1, limit[1])
             end
         end
         if i <= length(fixed) && fixed[i] || haskey(kwargs, Symbol("fix_", name))
