@@ -65,7 +65,16 @@ function SciMLBase.__solve(
         abstol = abstol, reltol = reltol, kwargs...
     )
 
-    m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef, opt.maxfcn)
+    if !isnothing(prob.lb) && length(prob.lb) != length(prob.u0)
+        throw(ArgumentError("Length of lb must match number of parameters"))
+    end
+    if !isnothing(prob.ub) && length(prob.ub) != length(prob.u0)
+        throw(ArgumentError("Length of ub must match number of parameters"))
+    end
+    lb = isnothing(prob.lb) ? fill(-Inf, length(prob.u0)) : prob.lb
+    ub = isnothing(prob.ub) ? fill(Inf, length(prob.u0)) : prob.ub
+
+    m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef, opt.maxfcn, limits = collect(zip(lb, ub)))
     migrad!(m, opt_arg.ncall)
 
     stats = Optimization.OptimizationStats(; time = m.elapsed)

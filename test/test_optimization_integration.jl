@@ -9,6 +9,10 @@ using Optimization, ComponentArrays
     @test sol.u ≈ [0.0] atol=1e-6
     @test sol.original.errors ≈ [1.0] atol=1e-3
 
+    opp3 = OptimizationProblem(opf, [1.2]; lb = [1.0], ub = [1.5])
+    sol3 = solve(opp3, MigradOptimizer())
+    @test sol3.u ≈ [1.0] atol=1e-3
+
     opf = OptimizationFunction((x,p)->x^2);
     opp = OptimizationProblem(opf, ComponentArray(; x = [1.0]))
     sol = solve(opp, MigradOptimizer(strategy=2))
