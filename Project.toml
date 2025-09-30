@@ -1,7 +1,7 @@
 name = "Minuit2"
 uuid = "37821647-3276-4ed8-9a4e-bc9886b3c106"
 authors = ["Jan Strube <jan.strube@gmail.com>", "Pere Mato <pere.mato@cern.ch>"]
-version = "0.4.1"
+version = "0.4.2"
 
 [deps]
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
