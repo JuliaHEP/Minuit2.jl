@@ -23,8 +23,10 @@ end
     opp1 = OptimizationProblem(opf, [1.2]; lb = [1.0], ub = [1.5])
     sol1 = solve(opp1, MigradOptimizer())
     @test sol1.u ≈ [1.0] atol=1e-3
+    @test sol1.original.limits ==  [(1.0, 1.5)]
 
     opp2 = OptimizationProblem(opf, [10.]; lb = [1.0], ub = [Inf])
     sol2 = solve(opp2, MigradOptimizer())
     @test sol2.u ≈ [1.0] atol=1e-3
+    @test sol2.original.limits ==  [(1.0, Inf)]
 end
