@@ -26,7 +26,14 @@ module Minuit2
     include("wrap.jl")
     include("cost.jl")
     include("api.jl")
-    include("roofit.jl")
+
+    module RooFit
+        export AbstractPdf, AbstractData, RealVar, ConstVar, DataSet, AbstractHistogram, FitResult
+        export Gaussian, Exponential, ArgusPdf, Chebyshev
+        export AddPdf, generate, distribution
+        export minuitkwargs, fitTo
+    end
+    export RooFit
 
     export draw_contour, draw_mncontour, draw_profile, draw_mnprofile, visualize, MigradOptimizer
 
@@ -55,4 +62,3 @@ module Minuit2
     end
 
 end
-

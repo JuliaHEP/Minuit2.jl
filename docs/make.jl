@@ -1,4 +1,6 @@
 using Documenter, Literate, Minuit2
+import Distributions, DistributionsHEP, FHist, RecipesBase, StatsBase
+using Minuit2.RooFit
  
 const tutorialsdir =  joinpath(@__DIR__, "src/tutorials")
 const project = @__DIR__

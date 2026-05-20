@@ -1,6 +1,7 @@
 using Minuit2.RooFit
 import Distributions: Exponential as _Exponential, Normal, pdf, cdf, truncated
 using FHist
+import Plots
 using QuadGK
 
 @testset "RooFit types" verbose=true begin
@@ -77,6 +78,7 @@ using QuadGK
         @test quadgk(x -> g.pdf(x), x.limits...)[1] ≈ 1.0f0
 
         @test show(devnull, g) === nothing
+        @test Plots.plot(g) isa Plots.Plot
     end
 
     @testset "Exponential" begin

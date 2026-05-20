@@ -1,4 +1,10 @@
 using ComponentArrays: ComponentArray
+import Distributions
+import DistributionsHEP
+import FHist
+import Plots
+import RecipesBase
+import StatsBase
 using Minuit2.RooFit
 using Random: seed!
 using Minuit2

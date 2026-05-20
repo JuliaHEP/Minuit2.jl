@@ -1,6 +1,7 @@
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+DistributionsHEP = "0d0d6f60-fb7b-48ca-90bb-e14e8b1655a7"
 FHist = "68837c9b-b678-4cd5-9925-8a54edc8f695"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"

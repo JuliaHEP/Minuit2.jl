@@ -20,8 +20,9 @@
 # and display results.
 
 using Minuit2
-using Minuit2.RooFit        # Load the RooFit module
+import Distributions, DistributionsHEP, FHist, RecipesBase, StatsBase
 using Plots                 # Plotting
+using Minuit2.RooFit        # Load the RooFit module
 theme(:boxed)
 # ## RooFit Modelling
 # The `RooFit` module is a powerful tool for defining and fitting models to data.
@@ -166,6 +167,4 @@ plot(result, components=[:bkg, :sig1, :sig2], legend=:topright)
 # The `draw_mncontour` function is used to plot the contours of the likelihood function in the parameter space.
 
 draw_mncontour(result.engine, :c, :μ)
-
-
 

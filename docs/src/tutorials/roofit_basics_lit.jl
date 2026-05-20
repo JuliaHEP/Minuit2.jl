@@ -17,8 +17,10 @@
 
 # Load the `Minuit2.RooFit` module and other needed modules.
 
-using Minuit2.RooFit
+using Minuit2
+import Distributions, DistributionsHEP, FHist, RecipesBase, StatsBase
 using Plots
+using Minuit2.RooFit
 theme(:boxed)
 
 # ## Setup the model
@@ -52,4 +54,3 @@ println("Sigma is $(gauss.sigma.value) ± $(gauss.sigma.error))")
 # ## Plot the fit result
 
 plot(result, title="Gaussian fit")
-

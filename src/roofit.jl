@@ -1,12 +1,18 @@
-module RooFit
-
-import Distributions: UnivariateDistribution, Exponential as _Exponential, Normal as _Normal, Uniform as _Uniform, pdf, cdf, truncated
-import FHist: Hist1D, AbstractHistogram
-import StatsBase: wsample, mean, std
 import Minuit2: BinnedNLL, ExtendedBinnedNLL, UnbinnedNLL, ExtendedUnbinnedNLL, CostFunction, Minuit, migrad!
-import DistributionsHEP: ArgusBG as ArgusBGDist, Chebyshev as ChebyshevDist
 import Base: getproperty, setproperty!, show, isconst, getindex, setindex!
 import Random: AbstractRNG, default_rng
+
+const _Exponential = Distributions.Exponential
+const _Normal = Distributions.Normal
+const _Uniform = Distributions.Uniform
+const pdf = Distributions.pdf
+const cdf = Distributions.cdf
+const truncated = Distributions.truncated
+const Hist1D = FHist.Hist1D
+const AbstractHistogram = FHist.AbstractHistogram
+const wsample = StatsBase.wsample
+const ArgusBGDist = DistributionsHEP.ArgusBG
+const ChebyshevDist = DistributionsHEP.Chebyshev
 
 
 export AbstractPdf, AbstractData, RealVar, ConstVar, DataSet, AbstractHistogram, FitResult
@@ -41,8 +47,8 @@ function getproperty(d::AbstractPdf, name::Symbol)
 end
 (model::AbstractPdf)(x) = model.pdf(x, (p.value for p in model.params)...)
 show(io::IO, d::AbstractPdf) = print(io, "$(nameof(typeof(d))){$(d.name)} PDF with parameters $([p.name for p in d.params])")
-mean(d::AbstractPdf) = mean(distribution(d))
-std(d::AbstractPdf) = std(distribution(d))
+StatsBase.mean(d::AbstractPdf) = StatsBase.mean(distribution(d))
+StatsBase.std(d::AbstractPdf) = StatsBase.std(distribution(d))
 function minuitkwargs(d::AbstractPdf; randomize=false)
     function value(p)
         if randomize
@@ -455,6 +461,3 @@ function getindex(d::AddPdf, c::Symbol)
     idx = findfirst(pdf -> pdf.name == c, d.pdfs)
     return d[idx]
 end
-
-end  # module RooFit
-export RooFit

@@ -1,11 +1,47 @@
 using CxxWrap
 using PrettyTables
 using LinearAlgebra
-using Distributions
 
 import Base: values, show
 
 export FCN, Minuit, migrad!, hesse!, matrix, minos!, simplex!, scan!, contour, mncontour, profile, mnprofile
+
+_erf(x::Float64) = ccall((:erf, Base.Math.libm), Float64, (Float64,), x)
+_chisq_cdf_1(x::Real) = _erf(sqrt(Float64(x) / 2))
+_chisq_quantile_2(p::Real) = -2 * log1p(-Float64(p))
+
+function _norm_quantile(p::Real)
+    x = Float64(p)
+    0 < x < 1 || throw(ArgumentError("probability must be between 0 and 1"))
+
+    a = (-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
+          1.383577518672690e2, -3.066479806614716e1, 2.506628277459239)
+    b = (-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
+          6.680131188771972e1, -1.328068155288572e1)
+    c = (-7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838,
+         -2.549732539343734, 4.374664141464968, 2.938163982698783)
+    d = (7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996,
+         3.754408661907416)
+
+    plow = 0.02425
+    phigh = 1 - plow
+    if x < plow
+        q = sqrt(-2 * log(x))
+        return (((((c[1] * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) * q + c[6]) /
+               ((((d[1] * q + d[2]) * q + d[3]) * q + d[4]) * q + 1)
+    elseif x <= phigh
+        q = x - 0.5
+        r = q * q
+        return (((((a[1] * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * r + a[6]) * q /
+               (((((b[1] * r + b[2]) * r + b[3]) * r + b[4]) * r + b[5]) * r + 1)
+    else
+        q = sqrt(-2 * log1p(-x))
+        return -(((((c[1] * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) * q + c[6]) /
+                ((((d[1] * q + d[2]) * q + d[3]) * q + d[4]) * q + 1)
+    end
+end
+
+_chisq_quantile_1(p::Real) = abs2(_norm_quantile((1 + Float64(p)) / 2))
 
 """
     Minuit structure
@@ -576,8 +612,8 @@ minimisation for all other parameters of the cost function for each scan point.
 This requires many more function evaluations than running the Hesse algorithm.
 """
 function minos!(m::Minuit; cl=0.68, ncall=0, parameters=(), strategy=1)
-    cl >= 1.0 && (cl = cdf(Chisq(1), cl^2))    # convert sigmas into confidence level
-    factor = quantile(Chisq(1), cl)            # convert confidence level to errordef
+    cl >= 1.0 && (cl = _chisq_cdf_1(cl^2))     # convert sigmas into confidence level
+    factor = _chisq_quantile_1(cl)             # convert confidence level to errordef
 
     # If the function minimum does not exist or the last state was modified, run Hesse
     if m.fmin === nothing || !IsValid(m.fmin)
@@ -732,8 +768,8 @@ function mncontour(m::Minuit, x, y; cl=0.68, size=50, interpolated=0)
     ix, xname = keypair(m, x)
     iy, yname = keypair(m, y)
 
-    cl >= 1.0 && (cl = cdf(Chisq(1), cl^2))    # convert sigmas into confidence level
-    factor = quantile(Chisq(2), cl)            # convert confidence level to errordef
+    cl >= 1.0 && (cl = _chisq_cdf_1(cl^2))     # convert sigmas into confidence level
+    factor = _chisq_quantile_2(cl)             # convert confidence level to errordef
 
     m.is_valid || throw(ErrorException("Function minimum is not valid: $(m.fmin)"))
     m.fixed[ix] && throw(ErrorException("Cannot scan over fixed parameter $xname"))
