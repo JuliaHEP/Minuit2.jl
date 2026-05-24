@@ -14,10 +14,9 @@ end
 
 basic_mds    = process_literate("introduction", "costfunctions")
 advanced_mds = process_literate("combined")
-rootfit_mds = process_literate("roofit", "roofit_basics")
 
 makedocs(;
-    modules=[Minuit2, Minuit2.RooFit],
+    modules=[Minuit2],
     format = Documenter.HTML(
         prettyurls = Base.get(ENV, "CI", nothing) == "true",
         size_threshold = 8000000,
@@ -29,8 +28,7 @@ makedocs(;
         "Public API" => "api.md",
         "Optimization.jl Interface" => "optimization_interface.md",
         "Tutorials" => [ "Basic" => basic_mds,
-                        "Advanced" => advanced_mds,
-                        "RooFit" => rootfit_mds],
+                        "Advanced" => advanced_mds],
         "Release Notes" => "release_notes.md",
     ],
     checkdocs=:exports,

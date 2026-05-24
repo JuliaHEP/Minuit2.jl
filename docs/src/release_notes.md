@@ -1,6 +1,10 @@
 
 # Release Notes
 
+## Unreleased
+### Breaking changes
+- Moved RooFit-style model building out of Minuit2.jl. Use [RooFitLite.jl](https://github.com/JuliaHEP/RooFitLite.jl) for `RealVar`, PDF construction, generation, fitting helpers, and plotting recipes.
+
 ## 0.4.1 (03-09-2025)
 ### Additions
 - `m = Minuit(f, x)` can be set up with `x::ComponentArray` and the resultant `m.values, m.errors` will be `ComponentArray`s as well.
@@ -69,5 +73,4 @@
 - The package provides a extension module (if Plots and FHist are loaded)
   for plotting the data and results of the fit.
 - Documentation is generated using Documenter
-
 

@@ -9,7 +9,7 @@ This package provides a Julia-friendly interface to the **Minuit2** C++ library,
 
 The API and additional features of this package are heavily inspired by [iminuit](https://github.dev/scikit-hep/iminuit), which offers a Python-friendly interface to the same library.
 
-In addition, we have provided an additional module `Minuit2.RooFit` with an initial implementation in Julia of the [RooFit](https://root.cern/manual/roofit/) modeling package often used in HEP data analysis.
+RooFit-style model building lives in [RooFitLite.jl](https://github.com/JuliaHEP/RooFitLite.jl), which integrates with Minuit2 through a package extension.
 
 ## Implementation Details  
 

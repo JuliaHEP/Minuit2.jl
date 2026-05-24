@@ -1,11 +1,15 @@
 using CxxWrap
 using PrettyTables
 using LinearAlgebra
-using Distributions
+using SpecialFunctions: erf, erfinv
 
 import Base: values, show
 
 export FCN, Minuit, migrad!, hesse!, matrix, minos!, simplex!, scan!, contour, mncontour, profile, mnprofile
+
+_chisq_cdf_1(x::Real) = erf(sqrt(Float64(x) / 2))
+_chisq_quantile_2(p::Real) = -2 * log1p(-Float64(p))
+_chisq_quantile_1(p::Real) = 2 * abs2(erfinv(Float64(p)))
 
 """
     Minuit structure
@@ -576,8 +580,8 @@ minimisation for all other parameters of the cost function for each scan point.
 This requires many more function evaluations than running the Hesse algorithm.
 """
 function minos!(m::Minuit; cl=0.68, ncall=0, parameters=(), strategy=1)
-    cl >= 1.0 && (cl = cdf(Chisq(1), cl^2))    # convert sigmas into confidence level
-    factor = quantile(Chisq(1), cl)            # convert confidence level to errordef
+    cl >= 1.0 && (cl = _chisq_cdf_1(cl^2))     # convert sigmas into confidence level
+    factor = _chisq_quantile_1(cl)             # convert confidence level to errordef
 
     # If the function minimum does not exist or the last state was modified, run Hesse
     if m.fmin === nothing || !IsValid(m.fmin)
@@ -732,8 +736,8 @@ function mncontour(m::Minuit, x, y; cl=0.68, size=50, interpolated=0)
     ix, xname = keypair(m, x)
     iy, yname = keypair(m, y)
 
-    cl >= 1.0 && (cl = cdf(Chisq(1), cl^2))    # convert sigmas into confidence level
-    factor = quantile(Chisq(2), cl)            # convert confidence level to errordef
+    cl >= 1.0 && (cl = _chisq_cdf_1(cl^2))     # convert sigmas into confidence level
+    factor = _chisq_quantile_2(cl)             # convert confidence level to errordef
 
     m.is_valid || throw(ErrorException("Function minimum is not valid: $(m.fmin)"))
     m.fixed[ix] && throw(ErrorException("Cannot scan over fixed parameter $xname"))

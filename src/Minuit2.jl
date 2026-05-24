@@ -26,7 +26,6 @@ module Minuit2
     include("wrap.jl")
     include("cost.jl")
     include("api.jl")
-    include("roofit.jl")
 
     export draw_contour, draw_mncontour, draw_profile, draw_mnprofile, visualize, MigradOptimizer
 
@@ -55,4 +54,3 @@ module Minuit2
     end
 
 end
-
