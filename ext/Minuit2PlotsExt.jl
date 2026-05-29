@@ -151,7 +151,6 @@ end
 #---Making use of the Plot Recipes instead of using visualize function ----------------------------
 
 @recipe function f(m::Minuit)
-    @show plotattributes
     isnothing(m.cost) && throw(ArgumentError("Minuit object does not have a cost function"))
     m.cost.ndim > 1 && throw(ArgumentError("Cost function dimension > 1 not supported"))
     (m.cost, m.is_valid, collect(m.values))
