@@ -95,8 +95,8 @@ m = Minuit(cost, ζ=0.5, μ=1., σ=0.5, τ=1.,
                  limit_ζ=(0, 1), limit_μ=(0, 2), limit_σ=(0, Inf), limit_τ=(0, Inf))
 migrad!(m)
 
-# We can also display the results of the fit graphically with the `visualize` function.
-visualize(m)
+# We can also display the results of the fit graphically with the `plot` function.
+plot(m, bins=20)
 
 # And finally, the `minos!` function can be used to calculate the errors on the parameters.
 minos!(m)
@@ -129,7 +129,7 @@ m.limits["s", "b", "σ", "τ"] = (0, Inf)
 migrad!(m)
 
 # visualize the results
-visualize(m)
+plot(m, bins=40)
 
 # #### Multivariate fits
 # We can also fit a multivariate model to multivariate data. 
@@ -168,7 +168,7 @@ m = Minuit(c, ζ=0.4, μ=1.0, σ=0.2, τ=2.0, limit_ζ=(0, 1), limit_σ=(0, Inf)
 migrad!(m)
 
 # visualize the results
-visualize(m)
+plot(m)
 
 # Sometimes the `cdf` is expensive to calculate. In this case, you can approximate taking 
 # the `pdf` evaluated at the center of the bin. 
@@ -181,7 +181,7 @@ m = Minuit(c, ζ=0.4, μ=0., σ=0.2, τ=2.0, limit_ζ=(0, 1), limit_σ=(0, Inf),
 migrad!(m)
 
 # visualize the results
-visualize(m)
+plot(m)
 
 # #### Extended BinnedNLL Fits
 # As in the unbinned case, the binned extended maximum-likelihood fit should be used when also 
@@ -199,7 +199,7 @@ m.limits["sig", "bkg", "σ", "τ"] = (0, Inf)
 migrad!(m)
 
 #
-visualize(m)
+plot(m)
 
 # #### Multi-dimensional Binned fit
 # Fitting a multidimensional histogram is easy. Since the `pdfs` in this example factorize, 
@@ -236,7 +236,7 @@ plot!(x, yt, label="Truth", linestyle=:dash)
 c = LeastSquares(x, y, ye, model)
 m1 = Minuit(c, a=0, b=0)
 migrad!(m1)
-visualize(m1)
+plot(m1)
 
 # the property `parameters` can be used to get the parameter values and errors.
 m1.parameters
@@ -292,7 +292,7 @@ migrad!(m2)
 
 c.y[4] = 3.0   # Generate an outlier
 migrad!(m1)
-visualize(m1)
+plot(m1)
 plot!(x, yt, label="Truth", linestyle=:dash)
 
 # 
@@ -305,14 +305,14 @@ m1.parameters
 mask = c.y .!= 3.0
 c.mask = mask
 migrad!(m1)
-visualize(m1)
+plot(m1)
 plot!(x, yt, label="Truth", linestyle=:dash)
 
 # Alternatively, we can repair this with by switching to `:soft_l1` loss.
 c.mask = nothing
 c.loss = :soft_l1
 migrad!(m1)
-visualize(m1)
+plot(m1)
 plot!(x, yt, label="Truth", linestyle=:dash)
 
 # And the parameters are
