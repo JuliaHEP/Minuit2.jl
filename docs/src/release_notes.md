@@ -4,6 +4,10 @@
 ## Unreleased
 ### Breaking changes
 - Moved RooFit-style model building out of Minuit2.jl. Use [RooFitLite.jl](https://github.com/JuliaHEP/RooFitLite.jl) for `RealVar`, PDF construction, generation, fitting helpers, and plotting recipes.
+### Fixes
+- Fixed the issue with `mnprofile` that was destroying the state of the fit
+### Additions
+- Added recipes to visualize the results of the fit using the `plot` function instead of the custom `visualize`. Old functions are kept to keep compatibility.  
 
 ## 0.4.1 (03-09-2025)
 ### Additions

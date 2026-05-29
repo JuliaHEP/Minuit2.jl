@@ -69,7 +69,7 @@ end
 """
     draw_mnprofile(m::Minuit, var; band=true, text=true, kwargs...)
 
-Draw 1D Minos profile over a range (requires matplotlib).
+Draw 1D Minos profile over a range
 """
 function Minuit2.draw_mnprofile(m::Minuit, var; band=true, text=true, kwargs...)
     ix, xname = Minuit2.keypair(m, var)
@@ -148,28 +148,30 @@ function visualize(cost::Minuit2.CostSum, is_valid, pars; nbins=50, kwargs...)
     return plt
 end
 
-#=
+#---Making use of the Plot Recipes instead of using visualize function ----------------------------
+
 @recipe function f(m::Minuit)
+    @show plotattributes
     isnothing(m.cost) && throw(ArgumentError("Minuit object does not have a cost function"))
     m.cost.ndim > 1 && throw(ArgumentError("Cost function dimension > 1 not supported"))
     (m.cost, m.is_valid, collect(m.values))
 end
 
-@recipe function f(cost::UnbinnedCostFunction, valid::Bool, pars::Vector{<:Real})
+@recipe function f(cost::UnbinnedCostFunction, valid::Bool, values::Vector{<:Real})
     nbins = get(plotattributes, :bins, 100)
     h = Hist1D(cost.data, nbins=nbins)
     edges = binedges(h)
     if valid
         @series begin
-            label := info(m)
+            label := "Fit"
             seriestype := :path
             color := :blue
             if cost isa UnbinnedNLL
                 scale = prod(Base.size(cost.data))*(edges[2]-edges[1])
-                (x -> cost.model(x, pars...)*scale, first(edges), last(edges))
+                (x -> cost.model(x, values...)*scale, first(edges), last(edges))
             else
                 scale = (edges[2]-edges[1])
-                (x -> cost.model(x, pars...)[2]*scale, first(edges), last(edges))
+                (x -> cost.model(x, values...)[2]*scale, first(edges), last(edges))
             end
         end
     end
@@ -181,6 +183,67 @@ end
     markercolor := :black
     ()
 end
-=#
 
+@recipe function f(cost::BinnedCostFunction, valid::Bool, values::Vector{<:Real})
+    dx = cost.binwidths[1]/2
+    if valid
+        @series begin
+            label := "Fit"
+            seriestype := :path
+            color := :blue
+            xlimits := (first(cost.bincenters), last(cost.bincenters))
+            if cost isa BinnedNLL
+                scale = sum(cost.bincounts)
+            else
+                scale = 1
+            end
+            if cost.use_pdf == :approximate
+                (x -> cost.model(x, values...) * scale * 2dx)
+            else
+                (x -> (cost.model(x+dx, values...)-cost.model(x-dx, values...))*scale)
+            end
+        end
+    end
+    seriestype := :scatter
+    x := cost.bincenters
+    y := cost.bincounts
+    yerr := sqrt.(cost.bincounts)
+    label := "Data"
+    markercolor := :black
+    ()
+end
+
+@recipe function f(cost::LeastSquares, valid::Bool, values::Vector{<:Real})
+    if valid
+        @series begin
+            label := "Fit"
+            seriestype := :path
+            color := :blue
+            cost.x, cost.model.(cost.x, values...)
+        end
+    end
+    seriestype := :scatter
+    label := "Data"
+    markercolor := :black
+    yerr := cost.yerror
+    cost.x, cost.y
+end
+
+@recipe function f(cost::Minuit2.CostSum, valid::Bool, values::Vector{<:Real})
+    n = length(cost.costs)
+    # Dynamic layout based on number of groups
+    cols = ceil(Int, sqrt(n))
+    rows = ceil(Int, n / cols)
+    layout --> (rows, cols)
+
+    # Loop over groups and emit a @series for each
+    for i in 1:n
+        c = cost.costs[i]
+        @series begin
+            subplot := i
+            title --> "$(c.model)"
+            (c, valid, values[cost.argsmapping[i]])
+        end
+    end
+end
 end

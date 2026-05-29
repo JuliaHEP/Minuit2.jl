@@ -869,7 +869,10 @@ function mnprofile(m::Minuit, var; size=30, bound=2, grid=nothing, subtract_min=
     strategy = MnStrategy(0)
     for (i,v) in enumerate(x)
         SetValue(state, ipar-1, v)
-        fmin = robust_low_level_fit(m, ncall, strategy, iterate, use_simplex)
+        (;fcn, tolerance, precision) = m
+        migrad = MnMigrad(fcn, state, strategy)
+        isnothing(precision) || SetPrecision(migrad, precision)
+        fmin = migrad(ncall, tolerance)
         IsValid(fmin) || @warn("MIGRAD fails to converge for $pname=$v")
         status[i] = IsValid(fmin)
         y[i] = Fval(fmin)
