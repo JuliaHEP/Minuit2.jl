@@ -42,7 +42,7 @@ m.limits["σ1", "σ2"] = (0., Inf) # Set limits for the sigma
 m.limits["f_sig1", "f_bkg"] = (0., 1.) # Set limits for the fractions
 m = migrad!(m) # Perform the fit
 
-visualize(m)
+plot(m, bins=50)
 plot!(x -> model(x, μ, σ1, σ2, a0, a1, f_sig1, f_bkg)* N * (b-a)/50, a, b, label="truth")
 
 sig1_(x, μ, σ1, f_bkg, f_sig1) = N * (1-f_bkg) * f_sig1, N * (1-f_bkg) * f_sig1 * pdf(truncated(Normal(μ,σ1),a,b),x)
@@ -60,4 +60,4 @@ m.limits["σ1", "σ2"] = (0., Inf)
 m.limits["f_sig1", "f_bkg"] = (0., 1.)
 m = migrad!(m)
 
-visualize(m)
+plot(m, bins=15)

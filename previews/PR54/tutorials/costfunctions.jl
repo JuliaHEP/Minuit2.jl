@@ -31,7 +31,7 @@ m = Minuit(cost, ζ=0.5, μ=1., σ=0.5, τ=1.,
                  limit_ζ=(0, 1), limit_μ=(0, 2), limit_σ=(0, Inf), limit_τ=(0, Inf))
 migrad!(m)
 
-visualize(m)
+plot(m, bins=20)
 
 minos!(m)
 
@@ -48,7 +48,7 @@ m = Minuit(cost; s=300, b=1500, μ=0., σ=0.2, τ=2)
 m.limits["s", "b", "σ", "τ"] = (0, Inf)
 migrad!(m)
 
-visualize(m)
+plot(m, bins=40)
 
 function my_logpdf(xy, μ, σ, τ)
     x, y = xy
@@ -66,7 +66,7 @@ c = BinnedNLL(bincounts(h), binedges(h), my_cdf)
 m = Minuit(c, ζ=0.4, μ=1.0, σ=0.2, τ=2.0, limit_ζ=(0, 1), limit_σ=(0, Inf), limit_τ=(0, Inf))
 migrad!(m)
 
-visualize(m)
+plot(m)
 
 my_pdf(x, ζ, μ, σ, τ) = ζ * pdf(truncated(Normal(μ, σ), a, b),x) + (1 - ζ) * pdf(truncated(Exponential(τ), a, b), x)
 
@@ -74,7 +74,7 @@ c = BinnedNLL(bincounts(h), binedges(h), my_pdf, use_pdf=:approximate)
 m = Minuit(c, ζ=0.4, μ=0., σ=0.2, τ=2.0, limit_ζ=(0, 1), limit_σ=(0, Inf), limit_τ=(0, Inf))
 migrad!(m)
 
-visualize(m)
+plot(m)
 
 integral(x, sig, bkg, μ, σ, τ) = sig * cdf(truncated(Normal(μ, σ), a, b),x) + bkg * cdf(truncated(Exponential(τ), a, b), x)
 
@@ -83,7 +83,7 @@ m = Minuit(cost, sig=500, bkg=800, μ=0, σ=0.2, τ=2, strategy=2)
 m.limits["sig", "bkg", "σ", "τ"] = (0, Inf)
 migrad!(m)
 
-visualize(m)
+plot(m)
 
 my_pdf2(xy, μ, σ, τ) = pdf(Normal(μ, σ),xy[1]) * pdf(Exponential(τ), xy[2])
 
@@ -109,7 +109,7 @@ plot!(x, yt, label="Truth", linestyle=:dash)
 c = LeastSquares(x, y, ye, model)
 m1 = Minuit(c, a=0, b=0)
 migrad!(m1)
-visualize(m1)
+plot(m1)
 
 m1.parameters
 
@@ -147,7 +147,7 @@ migrad!(m2)
 
 c.y[4] = 3.0   # Generate an outlier
 migrad!(m1)
-visualize(m1)
+plot(m1)
 plot!(x, yt, label="Truth", linestyle=:dash)
 
 m1.parameters
@@ -155,13 +155,13 @@ m1.parameters
 mask = c.y .!= 3.0
 c.mask = mask
 migrad!(m1)
-visualize(m1)
+plot(m1)
 plot!(x, yt, label="Truth", linestyle=:dash)
 
 c.mask = nothing
 c.loss = :soft_l1
 migrad!(m1)
-visualize(m1)
+plot(m1)
 plot!(x, yt, label="Truth", linestyle=:dash)
 
 m1.parameters
