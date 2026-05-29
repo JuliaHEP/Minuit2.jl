@@ -82,7 +82,7 @@ m.limits["f_sig1", "f_bkg"] = (0., 1.) # Set limits for the fractions
 m = migrad!(m) # Perform the fit
 
 # Visualize the fit
-visualize(m)
+plot(m, bins=50)
 plot!(x -> model(x, μ, σ1, σ2, a0, a1, f_sig1, f_bkg)* N * (b-a)/50, a, b, label="truth")
 
 # ## Combination of two signal distributions and a background distribution
@@ -114,4 +114,4 @@ m = migrad!(m)
 
 # Visualize the fit. In this case we visualize the fit for each sample
 # separately.
-visualize(m)
+plot(m, bins=15)
