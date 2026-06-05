@@ -75,7 +75,7 @@ function SciMLBase.__solve(
     ub = isnothing(prob.ub) ? fill(Inf, length(prob.u0)) : prob.ub
 
     m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef, opt.maxfcn, limits = collect(zip(lb, ub)))
-    migrad!(m, opt_arg.ncall)
+    migrad!(m, opt.strategy; opt_arg.ncall)
 
     stats = Optimization.OptimizationStats(; time = m.elapsed)
     u = m.values
