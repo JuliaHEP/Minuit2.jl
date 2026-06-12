@@ -10,7 +10,7 @@ opp = OptimizationProblem(opf, ComponentArray(x=1.0))
 sol = solve(opp, MigradOptimizer(strategy=2, tolerance=0.01), maxiters = 100)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">retcode: Default
 u: ComponentVector{Float64}(x = -8.30118196404328e-11)</code></pre><h2 id="Access-original-Minuit-object"><a class="docs-heading-anchor" href="#Access-original-Minuit-object">Access original <code>Minuit</code> object</a><a id="Access-original-Minuit-object-1"></a><a class="docs-heading-anchor-permalink" href="#Access-original-Minuit-object" title="Permalink"></a></h2><p>Minuit provides much information that does not fit into <code>Optimization.jl</code>&#39;s model, thus it&#39;s useful to access the original <code>Minuit</code> object:</p><pre><code class="language-julia hljs">sol.original</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌──────────────┬──────────────┬───────────┬────────────┬──────────────┐
 │ FCN          │ Method       │ Ncalls    │ Iterations │ Elapsed time │
-│ 0.0          │ migrad       │ 18        │ 3          │ 12.098 ms    │
+│ 0.0          │ migrad       │ 18        │ 3          │ 11.785 ms    │
 ├──────────────┼──────────────┼───────────┼────────────┼──────────────┤
 │ Valid Min.   │ Valid Param. │ Above EDM │ Call limit │ Edm          │
 │ true         │ true         │ false     │ false      │ 6.89096e-21  │
