@@ -1,6 +1,6 @@
 name = "Minuit2"
 uuid = "37821647-3276-4ed8-9a4e-bc9886b3c106"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Jan Strube <jan.strube@gmail.com>", "Pere Mato <pere.mato@cern.ch>"]
 
 [deps]
