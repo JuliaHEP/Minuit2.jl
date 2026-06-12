@@ -4,16 +4,16 @@ opf = OptimizationFunction((x,p)-&gt;x^2);
 opp = OptimizationProblem(opf, [1.0])
 solve(opp, MigradOptimizer(strategy=2, tolerance=0.01), maxiters = 100)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">retcode: Default
 u: 1-element Vector{Float64}:
- -8.269074314171121e-11</code></pre><p><a href="https://github.com/SciML/ComponentArrays.jl">ComponentArrays.jl</a> is also supported:</p><pre><code class="language-julia hljs">using ComponentArrays
+ -8.30118196404328e-11</code></pre><p><a href="https://github.com/SciML/ComponentArrays.jl">ComponentArrays.jl</a> is also supported:</p><pre><code class="language-julia hljs">using ComponentArrays
 opf = OptimizationFunction((x,p)-&gt;x^2);
 opp = OptimizationProblem(opf, ComponentArray(x=1.0))
 sol = solve(opp, MigradOptimizer(strategy=2, tolerance=0.01), maxiters = 100)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">retcode: Default
-u: ComponentVector{Float64}(x = -8.269074314171121e-11)</code></pre><h2 id="Access-original-Minuit-object"><a class="docs-heading-anchor" href="#Access-original-Minuit-object">Access original <code>Minuit</code> object</a><a id="Access-original-Minuit-object-1"></a><a class="docs-heading-anchor-permalink" href="#Access-original-Minuit-object" title="Permalink"></a></h2><p>Minuit provides much information that does not fit into <code>Optimization.jl</code>&#39;s model, thus it&#39;s useful to access the original <code>Minuit</code> object:</p><pre><code class="language-julia hljs">sol.original</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌──────────────┬──────────────┬───────────┬────────────┬──────────────┐
+u: ComponentVector{Float64}(x = -8.30118196404328e-11)</code></pre><h2 id="Access-original-Minuit-object"><a class="docs-heading-anchor" href="#Access-original-Minuit-object">Access original <code>Minuit</code> object</a><a id="Access-original-Minuit-object-1"></a><a class="docs-heading-anchor-permalink" href="#Access-original-Minuit-object" title="Permalink"></a></h2><p>Minuit provides much information that does not fit into <code>Optimization.jl</code>&#39;s model, thus it&#39;s useful to access the original <code>Minuit</code> object:</p><pre><code class="language-julia hljs">sol.original</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌──────────────┬──────────────┬───────────┬────────────┬──────────────┐
 │ FCN          │ Method       │ Ncalls    │ Iterations │ Elapsed time │
-│ 0.0          │ migrad       │ 25        │ 3          │ 13.136 ms    │
+│ 0.0          │ migrad       │ 18        │ 3          │ 12.098 ms    │
 ├──────────────┼──────────────┼───────────┼────────────┼──────────────┤
 │ Valid Min.   │ Valid Param. │ Above EDM │ Call limit │ Edm          │
-│ true         │ true         │ false     │ false      │ 6.83776e-21  │
+│ true         │ true         │ false     │ false      │ 6.89096e-21  │
 ├──────────────┼──────────────┼───────────┼────────────┼──────────────┤
 │ Hesse failed │ Has cov.     │ Accurate  │ Pos. def.  │ Forced       │
 │ false        │ true         │ true      │ true       │ false        │
@@ -21,7 +21,7 @@ u: ComponentVector{Float64}(x = -8.269074314171121e-11)</code></pre><h2 id="Acce
 ┌───┬──────┬──────────────┬─────────────┬────────┬────────┬────────┬────────┬───
 │<span class="sgr1">   │ Name │ Value        │ Hesse Error │ Minos- │ Minos+ │ Limit- │ Limit+ │  ⋯
 ├───┼──────┼──────────────┼─────────────┼────────┼────────┼────────┼────────┼───
-│ 1 │ θ    │ -8.26907e-11 │ 1.0         │        │        │        │        │  ⋯
+│ 1 │ θ    │ -8.30118e-11 │ 1.0         │        │        │        │        │  ⋯
 └───┴──────┴──────────────┴─────────────┴────────┴────────┴────────┴────────┴───
 <span class="sgr36">                                                               2 columns omitted
 ┌───┬─────┐
@@ -29,4 +29,4 @@ u: ComponentVector{Float64}(x = -8.269074314171121e-11)</code></pre><h2 id="Acce
 ├───┼─────┤
 │ θ │ 1.0 │
 └───┴─────┘
-</span></span></code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../api/">« Public API</a><a class="docs-footer-nextpage" href="../tutorials/introduction/">Introduction to Minuit2.jl »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 29 May 2026 19:04">Friday 29 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</span></span></code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../api/">« Public API</a><a class="docs-footer-nextpage" href="../tutorials/introduction/">Introduction to Minuit2.jl »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 12 June 2026 05:47">Friday 12 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
