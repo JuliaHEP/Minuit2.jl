@@ -30,3 +30,14 @@ end
     @test sol2.u ≈ [1.0] atol=1e-3
     @test sol2.original.limits ==  [(1.0, Inf)]
 end
+
+@testset "Optimization.jl Minuit options" begin
+    opf = OptimizationFunction((x,p)->sum(abs2, x));
+    opp = OptimizationProblem(opf, [10.0])
+
+    limited = solve(opp, MigradOptimizer(strategy=0); maxiters=1)
+    @test limited.original.has_reached_call_limit
+
+    stepped = solve(opp, MigradOptimizer(); error=[0.0123])
+    @test stepped.original.init_state[1].error == 0.0123
+end

@@ -14,6 +14,12 @@ SciMLBase.requireshessian(::MigradOptimizer) = false
 SciMLBase.requiresconsjac(::MigradOptimizer) = false
 SciMLBase.requiresconshess(::MigradOptimizer) = false
 
+function __maxiters_to_ncall(maxiters)
+    isnothing(maxiters) && return nothing
+    maxiters < 0 && throw(ArgumentError("maxiters must be non-negative"))
+    return Int(maxiters)
+end
+
 function __map_optimizer_args(
         ::OptimizationProblem, opt::MigradOptimizer;
         maxiters::Union{Number, Nothing} = 0,
@@ -49,11 +55,12 @@ function SciMLBase.__solve(
         abstol::Union{Number, Nothing} = nothing,
         reltol::Union{Number, Nothing} = nothing,
         tolerance::Number = 0.1,
+        error = (),
         kwargs...
     )
     local x, _loss
 
-    maxiters = Optimization._check_and_convert_maxiters(maxiters)
+    maxiters = __maxiters_to_ncall(maxiters)
 
     _loss = function (θ)
         x = prob.f(θ, prob.p)
@@ -74,7 +81,8 @@ function SciMLBase.__solve(
     lb = isnothing(prob.lb) ? fill(-Inf, length(prob.u0)) : prob.lb
     ub = isnothing(prob.ub) ? fill(Inf, length(prob.u0)) : prob.ub
 
-    m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef, opt.maxfcn, limits = collect(zip(lb, ub)))
+    m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef, opt.maxfcn,
+        error, limits = collect(zip(lb, ub)))
     migrad!(m, opt.strategy; opt_arg.ncall)
 
     stats = Optimization.OptimizationStats(; time = m.elapsed)
