@@ -25,6 +25,14 @@ end
     @test limited.original.has_reached_call_limit
 end
 
+@testset "Optimization.jl Minuit errors" begin
+    opf = OptimizationFunction((x,p)->sum(abs2, x));
+    opp = OptimizationProblem(opf, [10.0])
+
+    stepped = solve(opp, MigradOptimizer(); error=[0.0123])
+    @test stepped.original.init_state[1].error == 0.0123
+end
+
 @testset "Optimization.jl with ub and lb" begin
     opf = OptimizationFunction((x,p)->x^2);
 

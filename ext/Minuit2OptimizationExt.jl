@@ -55,6 +55,7 @@ function SciMLBase.__solve(
         abstol::Union{Number, Nothing} = nothing,
         reltol::Union{Number, Nothing} = nothing,
         tolerance::Number = 0.1,
+        error = (),
         kwargs...
     )
     local x, _loss
@@ -80,7 +81,8 @@ function SciMLBase.__solve(
     lb = isnothing(prob.lb) ? fill(-Inf, length(prob.u0)) : prob.lb
     ub = isnothing(prob.ub) ? fill(Inf, length(prob.u0)) : prob.ub
 
-    m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef, opt.maxfcn, limits = collect(zip(lb, ub)))
+    m = Minuit(_loss, prob.u0; opt.strategy, tolerance, opt.errordef, opt.maxfcn,
+        error, limits = collect(zip(lb, ub)))
     migrad!(m, opt.strategy; opt_arg.ncall)
 
     stats = Optimization.OptimizationStats(; time = m.elapsed)
