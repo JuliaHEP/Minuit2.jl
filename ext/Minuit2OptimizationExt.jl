@@ -14,6 +14,12 @@ SciMLBase.requireshessian(::MigradOptimizer) = false
 SciMLBase.requiresconsjac(::MigradOptimizer) = false
 SciMLBase.requiresconshess(::MigradOptimizer) = false
 
+function __maxiters_to_ncall(maxiters)
+    isnothing(maxiters) && return nothing
+    maxiters < 0 && throw(ArgumentError("maxiters must be non-negative"))
+    return Int(maxiters)
+end
+
 function __map_optimizer_args(
         ::OptimizationProblem, opt::MigradOptimizer;
         maxiters::Union{Number, Nothing} = 0,
@@ -53,7 +59,7 @@ function SciMLBase.__solve(
     )
     local x, _loss
 
-    maxiters = Optimization._check_and_convert_maxiters(maxiters)
+    maxiters = __maxiters_to_ncall(maxiters)
 
     _loss = function (θ)
         x = prob.f(θ, prob.p)
