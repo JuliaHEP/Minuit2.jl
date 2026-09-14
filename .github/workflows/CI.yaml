@@ -45,6 +45,9 @@ jobs:
   docs:
     name: Documentation
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Add this to allow pushing to gh-pages
+      pages: write
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
