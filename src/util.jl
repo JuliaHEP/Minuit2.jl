@@ -176,7 +176,7 @@ function Base.show(io::IO, p::Param)
     end
 end
 function Base.show(io::IO, view::ParamView)
-    header = [" ", "Name", "Value", "Hesse Error",  "Minos-", "Minos+", "Limit-", "Limit+", "Fixed", "Const"]
+    column_labels = [" ", "Name", "Value", "Hesse Error",  "Minos-", "Minos+", "Limit-", "Limit+", "Fixed", "Const"]
     number = [p.number for p in view]
     names = [p.name for p in view]
     values = [p.value for p in view]
@@ -187,7 +187,7 @@ function Base.show(io::IO, view::ParamView)
     limit_up  = [p.upper_limit ==  Inf ?  " " : p.upper_limit for p in view]
     fixed = [ p.is_fixed ? true : " " for p in view]
     consta = [ p.is_const ? true : " " for p in view]
-    pretty_table(io, [number names values errors minos_err_low minos_err_high limit_low limit_up fixed consta]; header=header, alignment=:l)
+    pretty_table(io, [number names values errors minos_err_low minos_err_high limit_low limit_up fixed consta]; column_labels, alignment=:l)
 end
 
 #---Minuit property accessors-----------------------------------------------------------------------
@@ -290,7 +290,7 @@ function Base.show(io::IO, f::FunctionMinimum, m=nothing)
     f.is_valid	     f.has_valid_parameters  f.is_above_max_edm	f.has_reached_call_limit  f.edm;
     "Hesse failed"	 "Has cov."	          "Accurate"	        "Pos. def."               "Forced";
     f.hesse_failed   f.has_covariance     f.has_accurate_covar	f.has_posdef_covar        f.has_made_posdef_covar]
-    pretty_table(io, data1; alignment=:l, show_header=false, body_hlines = [2,4])
+    pretty_table(io, data1; alignment=:l, show_column_labels=false, table_format=TableFormat(; horizontal_lines_at_data_rows = [2, 4]))
 end
 
 function Base.show(io::IO, m::Minuit)
@@ -305,9 +305,9 @@ function Base.show(io::IO, m::Minuit)
             cov = [m.covariance(i, j) for i in 1:m.npar, j in 1:m.npar]
             d = diag(cov) .^ 0.5
             cov ./= d .* d'
-            header = [" ", m.names...]
+            column_labels = [" ", m.names...]
             data = hcat(m.names, cov)
-            pretty_table(io, data; header=header, alignment=:l, show_header=true)
+            pretty_table(io, data; column_labels=column_labels, alignment=:l)
         end
     end
 end

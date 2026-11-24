@@ -623,13 +623,13 @@ function minos!(m::Minuit; cl=0.68, ncall=0, parameters=(), strategy=1)
 end
 
 function Base.show(io::IO, me::MinosError)
-    header = [me.number, me.is_valid ? "valid" : "invalid", " " ]
+    column_labels = [me.number, me.is_valid ? "valid" : "invalid", " " ]
     data = [ "Error"    me.lower      me.upper;
              "Valid"    me.lower_valid me.upper_valid;
              "At Limit" me.at_lower_limit me.at_upper_limit;
              "Max Fcn"  me.at_lower_max_fcn me.at_upper_max_fcn;
              "New Min"  me.lower_new_min me.upper_new_min;]
-    pretty_table(io, data; header=header, alignment=:l)
+    pretty_table(io, data; column_labels, alignment=:l)
 end
 
 """
